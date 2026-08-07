@@ -10,7 +10,7 @@ abstract final class AppTheme {
       useMaterial3: true,
       scaffoldBackgroundColor: AppColors.white,
       colorScheme: const ColorScheme.light(
-        primary: AppColors.ink,
+        primary: AppColors.brand,
         onPrimary: AppColors.white,
         surface: AppColors.white,
         onSurface: AppColors.ink,
@@ -49,13 +49,13 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.ink),
+          borderSide: const BorderSide(color: AppColors.brand),
         ),
       ),
       dividerColor: AppColors.border,
       splashFactory: NoSplash.splashFactory,
       cupertinoOverrideTheme: const CupertinoThemeData(
-        primaryColor: AppColors.ink,
+        primaryColor: AppColors.brand,
         scaffoldBackgroundColor: AppColors.white,
         barBackgroundColor: AppColors.white,
       ),
@@ -68,15 +68,21 @@ abstract final class AppTheme {
       useMaterial3: true,
       scaffoldBackgroundColor: AppColors.ink,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.white,
-        onPrimary: AppColors.ink,
-        surface: AppColors.charcoal,
+        primary: AppColors.brand,
+        onPrimary: AppColors.white,
+        surface: AppColors.nightCard,
         onSurface: AppColors.white,
-        outline: AppColors.slate,
+        surfaceContainerHighest: AppColors.nightInput,
+        onSurfaceVariant: AppColors.muted,
+        outline: AppColors.nightBorder,
       ),
     );
     return base.copyWith(
-      textTheme: base.textTheme.apply(fontFamily: '.SF Pro Text'),
+      textTheme: base.textTheme.apply(
+        bodyColor: AppColors.white,
+        displayColor: AppColors.white,
+        fontFamily: '.SF Pro Text',
+      ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
@@ -85,7 +91,7 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.charcoal,
+        fillColor: AppColors.nightInput,
         hintStyle: const TextStyle(
           color: AppColors.muted,
           fontSize: 13,
@@ -98,16 +104,17 @@ abstract final class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.slate),
+          borderSide: const BorderSide(color: AppColors.nightBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.white),
+          borderSide: const BorderSide(color: AppColors.brand),
         ),
       ),
-      dividerColor: AppColors.slate,
+      dividerColor: AppColors.nightBorder,
+      splashFactory: NoSplash.splashFactory,
       cupertinoOverrideTheme: const CupertinoThemeData(
-        primaryColor: AppColors.white,
+        primaryColor: AppColors.brand,
         scaffoldBackgroundColor: AppColors.ink,
         barBackgroundColor: AppColors.ink,
       ),

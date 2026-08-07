@@ -29,7 +29,7 @@ class AppTopBar extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: dark ? AppColors.charcoal : AppColors.soft,
+                color: dark ? AppColors.nightInput : AppColors.soft,
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -50,7 +50,7 @@ class AppTopBar extends StatelessWidget {
                         color: dark ? AppColors.white : AppColors.ink,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: dark ? AppColors.charcoal : AppColors.soft,
+                          color: dark ? AppColors.nightInput : AppColors.soft,
                         ),
                       ),
                     ),

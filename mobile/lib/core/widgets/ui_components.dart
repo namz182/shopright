@@ -2,6 +2,32 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
+Color secondaryTextColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? AppColors.muted
+    : AppColors.slate;
+
+class BrandIconTile extends StatelessWidget {
+  const BrandIconTile({required this.icon, this.size = 44, super.key});
+
+  final IconData icon;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: dark ? AppColors.brandDeep : AppColors.brand,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Icon(icon, color: AppColors.white, size: 19),
+    );
+  }
+}
+
 class SectionLabel extends StatelessWidget {
   const SectionLabel(this.text, {this.trailing, super.key});
 
@@ -42,15 +68,15 @@ class SoftCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: dark ? AppColors.charcoal : AppColors.surface,
+    return Material(
+      color: dark ? AppColors.nightCard : AppColors.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: dark ? AppColors.slate : AppColors.border),
+        side: BorderSide(
+          color: dark ? AppColors.nightBorder : AppColors.border,
+        ),
       ),
-      child: child,
+      child: Padding(padding: padding, child: child),
     );
   }
 }
@@ -72,24 +98,20 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: FilledButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 17),
-        label: Text(label),
-        style: FilledButton.styleFrom(
-          elevation: 0,
-          backgroundColor: light
-              ? (dark ? AppColors.border : AppColors.white)
-              : AppColors.ink,
-          foregroundColor: light ? AppColors.ink : AppColors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-        ),
+    return FilledButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 17),
+      label: Text(label),
+      style: FilledButton.styleFrom(
+        elevation: 0,
+        backgroundColor: light
+            ? (dark ? AppColors.nightBorder : AppColors.white)
+            : (dark ? AppColors.brandDeep : AppColors.brand),
+        foregroundColor: light ? AppColors.ink : AppColors.white,
+        minimumSize: const Size(0, 50),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+        shape: const StadiumBorder(),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
       ),
     );
   }

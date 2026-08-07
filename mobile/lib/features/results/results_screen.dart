@@ -7,20 +7,19 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_top_bar.dart';
 import '../../core/widgets/ui_components.dart';
-import '../history/history_screen.dart';
-import '../settings/settings_screen.dart';
-import '../shops/shops_screen.dart';
 
 class ResultsScreen extends StatefulWidget {
   const ResultsScreen({
     required this.isDarkMode,
     required this.onThemeChanged,
+    required this.onTabSelected,
     this.showLoading = false,
     super.key,
   });
 
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
+  final ValueChanged<AppTab> onTabSelected;
   final bool showLoading;
 
   @override
@@ -41,26 +40,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   void _selectTab(AppTab tab) {
-    final Widget? screen = switch (tab) {
-      AppTab.home => null,
-      AppTab.history => HistoryScreen(
-        isDarkMode: widget.isDarkMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
-      AppTab.shops => ShopsScreen(
-        isDarkMode: widget.isDarkMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
-      AppTab.settings => SettingsScreen(
-        isDarkMode: widget.isDarkMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
-    };
-    if (tab == AppTab.home) {
-      Navigator.of(context).pop();
-    } else if (screen != null) {
-      Navigator.of(context).pushReplacement(_fadeRoute(screen));
-    }
+    widget.onTabSelected(tab);
   }
 
   @override
@@ -276,10 +256,11 @@ class _LowestTotalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.ink,
+        color: dark ? AppColors.brandDeep : AppColors.brand,
         borderRadius: BorderRadius.circular(25),
       ),
       child: const Row(
@@ -297,7 +278,7 @@ class _LowestTotalCard extends StatelessWidget {
                 Text(
                   'Total at lowest prices',
                   style: TextStyle(
-                    color: AppColors.border,
+                    color: AppColors.onBrandMuted,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -355,8 +336,8 @@ class _LowestPriceCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     store,
-                    style: const TextStyle(
-                      color: AppColors.slate,
+                    style: TextStyle(
+                      color: secondaryTextColor(context),
                       fontSize: 10,
                     ),
                   ),
@@ -468,7 +449,10 @@ class _ShopRow extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               difference,
-              style: const TextStyle(color: AppColors.slate, fontSize: 10),
+              style: TextStyle(
+                color: secondaryTextColor(context),
+                fontSize: 10,
+              ),
             ),
           ],
         ),
@@ -489,7 +473,7 @@ class _StorePricesSheet extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(22, 10, 22, 30),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.ink
+            ? AppColors.nightCard
             : AppColors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -515,9 +499,12 @@ class _StorePricesSheet extends StatelessWidget {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Prices compared across nearby shops',
-              style: TextStyle(color: AppColors.slate, fontSize: 12),
+              style: TextStyle(
+                color: secondaryTextColor(context),
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 18),
             ...prices.asMap().entries.map((entry) {
@@ -610,9 +597,3 @@ class _ShimmerBlock extends StatelessWidget {
     );
   }
 }
-
-PageRoute<void> _fadeRoute(Widget screen) => PageRouteBuilder<void>(
-  pageBuilder: (_, _, _) => screen,
-  transitionsBuilder: (_, animation, _, child) =>
-      FadeTransition(opacity: animation, child: child),
-);

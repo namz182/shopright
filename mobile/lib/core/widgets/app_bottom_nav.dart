@@ -19,6 +19,7 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
       child: Align(
@@ -31,16 +32,11 @@ class AppBottomNav extends StatelessWidget {
               height: 58,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                color: AppColors.navOverlay,
+                color: dark ? const Color(0xF2141B24) : AppColors.navOverlay,
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: AppColors.charcoal),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x26000000),
-                    blurRadius: 24,
-                    offset: Offset(0, 10),
-                  ),
-                ],
+                border: Border.all(
+                  color: dark ? AppColors.nightBorder : AppColors.charcoal,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -112,14 +108,14 @@ class _NavItem extends StatelessWidget {
               Icon(
                 icon,
                 size: 17,
-                color: selected ? AppColors.ink : AppColors.muted,
+                color: selected ? AppColors.brand : AppColors.muted,
               ),
               if (selected) ...[
                 const SizedBox(width: 7),
                 Text(
                   label,
                   style: const TextStyle(
-                    color: AppColors.ink,
+                    color: AppColors.brand,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),

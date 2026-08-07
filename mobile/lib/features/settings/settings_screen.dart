@@ -2,11 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/app_bottom_nav.dart';
-import '../../core/widgets/app_top_bar.dart';
 import '../../core/widgets/ui_components.dart';
-import '../history/history_screen.dart';
-import '../shops/shops_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -24,26 +20,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late bool _isDarkMode = widget.isDarkMode;
-
-  void _selectTab(BuildContext context, AppTab tab) {
-    final Widget? screen = switch (tab) {
-      AppTab.home => null,
-      AppTab.history => HistoryScreen(
-        isDarkMode: _isDarkMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
-      AppTab.shops => ShopsScreen(
-        isDarkMode: _isDarkMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
-      AppTab.settings => null,
-    };
-    if (tab == AppTab.home) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } else if (screen != null) {
-      Navigator.of(context).pushReplacement(_fadeRoute(screen));
-    }
-  }
 
   void _showMessage(BuildContext context, String title) {
     showCupertinoDialog<void>(
@@ -63,131 +39,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          RefreshIndicator.adaptive(
-            onRefresh: _refresh,
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              slivers: [
-                SliverSafeArea(
-                  bottom: false,
-                  sliver: SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(22, 86, 22, 112),
-                    sliver: SliverList.list(
-                      children: [
-                        const Text(
-                          'Settings',
-                          style: TextStyle(
-                            fontSize: 25,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 7),
-                        const Text(
-                          'Personalize your Shop Right experience.',
-                          style: TextStyle(
-                            color: AppColors.slate,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const SectionLabel('Appearance'),
-                        const SizedBox(height: 11),
-                        SoftCard(
-                          padding: EdgeInsets.zero,
-                          child: SwitchListTile.adaptive(
-                            value: _isDarkMode,
-                            onChanged: (value) {
-                              setState(() => _isDarkMode = value);
-                              widget.onThemeChanged(value);
-                            },
-                            activeTrackColor: AppColors.ink,
-                            secondary: const Icon(CupertinoIcons.moon_fill),
-                            title: const Text(
-                              'Dark mode',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            subtitle: Text(
-                              _isDarkMode
-                                  ? 'Using the darker appearance'
-                                  : 'Using the light appearance',
-                              style: const TextStyle(
-                                color: AppColors.slate,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const SectionLabel('Preferences'),
-                        const SizedBox(height: 11),
-                        _SettingsGroup(
-                          children: [
-                            _SettingsAction(
-                              icon: CupertinoIcons.location_solid,
-                              label: 'Location',
-                              value: 'Ndola, Copperbelt',
-                              onTap: () => _showMessage(context, 'Location'),
-                            ),
-                            _SettingsAction(
-                              icon: CupertinoIcons.bell_fill,
-                              label: 'Price alerts',
-                              value: 'On',
-                              onTap: () =>
-                                  _showMessage(context, 'Price alerts'),
-                            ),
-                            _SettingsAction(
-                              icon: CupertinoIcons.money_dollar_circle_fill,
-                              label: 'Currency',
-                              value: 'ZMW',
-                              onTap: () => _showMessage(context, 'Currency'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        const SectionLabel('Support'),
-                        const SizedBox(height: 11),
-                        _SettingsGroup(
-                          children: [
-                            _SettingsAction(
-                              icon: CupertinoIcons.question_circle_fill,
-                              label: 'Help & feedback',
-                              onTap: () =>
-                                  _showMessage(context, 'Help & feedback'),
-                            ),
-                            _SettingsAction(
-                              icon: CupertinoIcons.doc_text_fill,
-                              label: 'Privacy policy',
-                              onTap: () =>
-                                  _showMessage(context, 'Privacy policy'),
-                            ),
-                            _SettingsAction(
-                              icon: CupertinoIcons.info_circle_fill,
-                              label: 'About Shop Right',
-                              value: 'Version 1.0.0',
-                              onTap: () =>
-                                  _showMessage(context, 'About Shop Right'),
-                            ),
-                          ],
-                        ),
-                      ],
+    return RefreshIndicator.adaptive(
+      onRefresh: _refresh,
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        slivers: [
+          SliverSafeArea(
+            bottom: false,
+            sliver: SliverPadding(
+              padding: const EdgeInsets.fromLTRB(22, 86, 22, 112),
+              sliver: SliverList.list(
+                children: [
+                  const Text(
+                    'Settings',
+                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    'Personalize your Shop Right experience.',
+                    style: TextStyle(
+                      color: secondaryTextColor(context),
+                      fontSize: 13,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 24),
+                  const SectionLabel('Appearance'),
+                  const SizedBox(height: 11),
+                  SoftCard(
+                    padding: EdgeInsets.zero,
+                    child: SwitchListTile.adaptive(
+                      value: _isDarkMode,
+                      onChanged: (value) {
+                        setState(() => _isDarkMode = value);
+                        widget.onThemeChanged(value);
+                      },
+                      activeTrackColor: AppColors.brand,
+                      secondary: const Icon(CupertinoIcons.moon_fill),
+                      title: const Text(
+                        'Dark mode',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _isDarkMode
+                            ? 'Using the darker appearance'
+                            : 'Using the light appearance',
+                        style: TextStyle(
+                          color: secondaryTextColor(context),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const SectionLabel('Preferences'),
+                  const SizedBox(height: 11),
+                  _SettingsGroup(
+                    children: [
+                      _SettingsAction(
+                        icon: CupertinoIcons.location_solid,
+                        label: 'Location',
+                        value: 'Ndola, Copperbelt',
+                        onTap: () => _showMessage(context, 'Location'),
+                      ),
+                      _SettingsAction(
+                        icon: CupertinoIcons.bell_fill,
+                        label: 'Price alerts',
+                        value: 'On',
+                        onTap: () => _showMessage(context, 'Price alerts'),
+                      ),
+                      _SettingsAction(
+                        icon: CupertinoIcons.money_dollar_circle_fill,
+                        label: 'Currency',
+                        value: 'ZMW',
+                        onTap: () => _showMessage(context, 'Currency'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const SectionLabel('Support'),
+                  const SizedBox(height: 11),
+                  _SettingsGroup(
+                    children: [
+                      _SettingsAction(
+                        icon: CupertinoIcons.question_circle_fill,
+                        label: 'Help & feedback',
+                        onTap: () => _showMessage(context, 'Help & feedback'),
+                      ),
+                      _SettingsAction(
+                        icon: CupertinoIcons.doc_text_fill,
+                        label: 'Privacy policy',
+                        onTap: () => _showMessage(context, 'Privacy policy'),
+                      ),
+                      _SettingsAction(
+                        icon: CupertinoIcons.info_circle_fill,
+                        label: 'About Shop Right',
+                        value: 'Version 1.0.0',
+                        onTap: () => _showMessage(context, 'About Shop Right'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const AppStickyTopBar(),
-          AppBottomNav(
-            selected: AppTab.settings,
-            onSelected: (tab) => _selectTab(context, tab),
           ),
         ],
       ),
@@ -197,12 +155,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 Future<void> _refresh() =>
     Future<void>.delayed(const Duration(milliseconds: 850));
-
-PageRoute<void> _fadeRoute(Widget screen) => PageRouteBuilder<void>(
-  pageBuilder: (_, _, _) => screen,
-  transitionsBuilder: (_, animation, _, child) =>
-      FadeTransition(opacity: animation, child: child),
-);
 
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({required this.children});
@@ -253,7 +205,10 @@ class _SettingsAction extends StatelessWidget {
             if (value != null)
               Text(
                 value!,
-                style: const TextStyle(color: AppColors.slate, fontSize: 11),
+                style: TextStyle(
+                  color: secondaryTextColor(context),
+                  fontSize: 11,
+                ),
               ),
             const SizedBox(width: 7),
             const Icon(
