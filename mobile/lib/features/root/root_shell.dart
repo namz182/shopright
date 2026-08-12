@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_top_bar.dart';
+import '../../data/repositories/repositories.dart';
 import '../history/history_screen.dart';
 import '../home/home_screen.dart';
-import '../results/results_screen.dart';
 import '../settings/settings_screen.dart';
 import '../shops/shops_screen.dart';
 
 class RootShell extends StatefulWidget {
   const RootShell({
+    required this.repositories,
     required this.isDarkMode,
     required this.onThemeChanged,
     super.key,
   });
 
+  final Repositories repositories;
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
 
@@ -30,21 +32,6 @@ class _RootShellState extends State<RootShell> {
     setState(() => _tab = tab);
   }
 
-  void _openResults() {
-    Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (_, _, _) => ResultsScreen(
-          showLoading: true,
-          isDarkMode: widget.isDarkMode,
-          onThemeChanged: widget.onThemeChanged,
-          onTabSelected: _switchTab,
-        ),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,12 +41,13 @@ class _RootShellState extends State<RootShell> {
             index: _tab.index,
             children: [
               HomeScreen(
+                repositories: widget.repositories,
                 isDarkMode: widget.isDarkMode,
                 onThemeChanged: widget.onThemeChanged,
-                onOpenResults: _openResults,
+                onTabSelected: _switchTab,
               ),
-              HistoryScreen(),
-              ShopsScreen(),
+              HistoryScreen(repositories: widget.repositories),
+              ShopsScreen(repositories: widget.repositories),
               SettingsScreen(
                 isDarkMode: widget.isDarkMode,
                 onThemeChanged: widget.onThemeChanged,

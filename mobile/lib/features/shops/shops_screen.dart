@@ -3,9 +3,49 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/ui_components.dart';
+import '../../data/local/models.dart';
+import '../../data/repositories/repositories.dart';
 
-class ShopsScreen extends StatelessWidget {
-  const ShopsScreen({super.key});
+class ShopsScreen extends StatefulWidget {
+  const ShopsScreen({required this.repositories, super.key});
+
+  final Repositories repositories;
+
+  @override
+  State<ShopsScreen> createState() => _ShopsScreenState();
+}
+
+class _ShopsScreenState extends State<ShopsScreen> {
+  List<StoreInfo> _stores = const [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final stores = await widget.repositories.catalog.stores();
+      if (!mounted) return;
+      setState(() {
+        _stores = stores;
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refresh() async {
+    try {
+      await widget.repositories.catalog.refreshFromApi();
+    } catch (_) {
+      // Offline — keep cached stores.
+    }
+    await _load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,33 +75,34 @@ class ShopsScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 22),
-                  _LocationCard(),
+                  const _LocationCard(),
                   SizedBox(height: 24),
                   SectionLabel('Available Stores'),
                   SizedBox(height: 11),
-                  _ShopCard(
-                    name: 'Shoprite Ndola',
-                    distance: '2.1 km away',
-                    detail: 'Fresh prices checked today',
-                  ),
-                  SizedBox(height: 10),
-                  _ShopCard(
-                    name: 'Local Market (Chifubu)',
-                    distance: '1.4 km away',
-                    detail: 'Fresh prices checked today',
-                  ),
-                  SizedBox(height: 10),
-                  _ShopCard(
-                    name: 'Pick n Pay Copperbelt',
-                    distance: '3.8 km away',
-                    detail: 'Fresh prices checked yesterday',
-                  ),
-                  SizedBox(height: 10),
-                  _ShopCard(
-                    name: 'Melissa Supermarket',
-                    distance: '4.5 km away',
-                    detail: 'Prices coming soon',
-                  ),
+                  if (_loading)
+                    SoftCard(
+                      child: Text(
+                        'Loading stores...',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: secondaryTextColor(context),
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  else
+                    ..._stores.map(
+                      (store) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _ShopCard(
+                          name: store.name,
+                          distance: store.distanceKm != null
+                              ? '${_trimDistance(store.distanceKm!)} km away'
+                              : null,
+                          detail: store.location,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -72,8 +113,10 @@ class ShopsScreen extends StatelessWidget {
   }
 }
 
-Future<void> _refresh() =>
-    Future<void>.delayed(const Duration(milliseconds: 850));
+String _trimDistance(double km) {
+  final text = km.toStringAsFixed(1);
+  return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+}
 
 class _LocationCard extends StatelessWidget {
   const _LocationCard();
@@ -115,13 +158,13 @@ class _LocationCard extends StatelessWidget {
 class _ShopCard extends StatelessWidget {
   const _ShopCard({
     required this.name,
-    required this.distance,
     required this.detail,
+    this.distance,
   });
 
   final String name;
-  final String distance;
-  final String detail;
+  final String? distance;
+  final String? detail;
 
   @override
   Widget build(BuildContext context) {
@@ -141,19 +184,23 @@ class _ShopCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  distance,
-                  style: TextStyle(
-                    color: secondaryTextColor(context),
-                    fontSize: 10,
+                if (distance != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    distance!,
+                    style: TextStyle(
+                      color: secondaryTextColor(context),
+                      fontSize: 10,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  detail,
-                  style: const TextStyle(color: AppColors.muted, fontSize: 10),
-                ),
+                ],
+                if (detail != null && detail!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    detail!,
+                    style: const TextStyle(color: AppColors.muted, fontSize: 10),
+                  ),
+                ],
               ],
             ),
           ),

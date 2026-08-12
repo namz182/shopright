@@ -1,31 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/money.dart';
+import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/ui_components.dart';
+import '../../data/local/models.dart';
+import '../../data/repositories/repositories.dart';
+import '../results/comparison_result.dart';
+import '../results/results_screen.dart';
 
-const _grocerySuggestions = <String>[
-  'Breakfast Meal 25kg',
-  'Roller Meal 10kg',
-  'Cooking Oil 2.5L',
-  'Vegetable Oil 1L',
-  'White Sugar 2kg',
-  'Brown Sugar 1kg',
-  'Brown Bread',
-  'White Bread Loaf',
-  'Fresh Milk 1L',
-  'Powdered Milk 500g',
-  'Salt 1kg',
-  'Chicken Stock Cubes',
-  'Tomatoes 1kg',
-  'Onions 1kg',
-  'Potatoes 5kg',
-  'Carrots 1kg',
-  'Rice 5kg',
-  'Spaghetti Pasta',
-  'Mango Juice 2L',
-  'Toilet Paper 12 Pack',
-];
+IconData iconForCategory(String category) {
+  return switch (category) {
+    'Essential Staples' => CupertinoIcons.circle_grid_hex_fill,
+    'Cooking Goods' => CupertinoIcons.drop_fill,
+    'Pantry Items' => CupertinoIcons.cube_box_fill,
+    'Fresh Produce' => CupertinoIcons.sun_max_fill,
+    'Dairy' => CupertinoIcons.drop_fill,
+    'Bakery' => CupertinoIcons.cube_box_fill,
+    _ => CupertinoIcons.bag_fill,
+  };
+}
 
 class GroceryItem {
   GroceryItem({
@@ -43,42 +40,91 @@ class GroceryItem {
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
+    required this.repositories,
     required this.isDarkMode,
     required this.onThemeChanged,
-    required this.onOpenResults,
+    required this.onTabSelected,
     super.key,
   });
 
+  final Repositories repositories;
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
-  final VoidCallback onOpenResults;
+  final ValueChanged<AppTab> onTabSelected;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _budget = 'ZMW 1,200.00';
-  final _items = <GroceryItem>[
-    GroceryItem(
-      name: 'Breakfast Meal 25kg',
-      category: 'Essential Staples',
-      icon: CupertinoIcons.circle_grid_hex_fill,
-      quantity: 2,
-    ),
-    GroceryItem(
-      name: 'Cooking Oil 2.5L',
-      category: 'Cooking Goods',
-      icon: CupertinoIcons.drop_fill,
-      quantity: 1,
-    ),
-    GroceryItem(
-      name: 'White Sugar 2kg',
-      category: 'Pantry Items',
-      icon: CupertinoIcons.cube_box_fill,
-      quantity: 1,
-    ),
-  ];
+  Repositories get _repos => widget.repositories;
+
+  double? _budget;
+  bool _loading = true;
+  List<String> _catalogNames = const [];
+  Map<String, GroceryProduct> _catalogByName = const {};
+  final _items = <GroceryItem>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    unawaited(_refreshFromApi());
+  }
+
+  Future<void> _load() async {
+    try {
+      final budget = await _repos.settings.budget();
+      final savedItems = await _repos.settings.shoppingItems();
+      final products = await _repos.catalog.products();
+      if (!mounted) return;
+      setState(() {
+        _budget = budget;
+        _items
+          ..clear()
+          ..addAll(
+            savedItems.map(
+              (item) => GroceryItem(
+                name: item.name,
+                category: item.category,
+                icon: iconForCategory(item.category),
+                quantity: item.quantity,
+              ),
+            ),
+          );
+        _catalogNames = products.map((p) => p.name).toList();
+        _catalogByName = {for (final p in products) p.name: p};
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refreshFromApi() async {
+    try {
+      await _repos.catalog.refreshFromApi();
+      await _load();
+    } catch (_) {
+      // Offline — keep using the local cache.
+    }
+  }
+
+  void _persistItems() {
+    unawaited(
+      _repos.settings.saveShoppingItems(
+        _items
+            .map(
+              (item) => ShoppingItem(
+                name: item.name,
+                category: item.category,
+                quantity: item.quantity,
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,9 +137,13 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _BudgetCard(budget: _budget, onEdit: _editBudget),
+                _BudgetCard(
+                  budget: formatZmw(_budget ?? 0),
+                  onEdit: _editBudget,
+                ),
                 const SizedBox(height: 20),
                 _SearchBar(
+                  suggestions: _catalogNames,
                   onAdd: _quickAdd,
                   remove: _removeItem,
                   contains: (name) => _items.any((item) => item.name == name),
@@ -104,7 +154,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   trailing: TextButton(
                     onPressed: _items.isEmpty
                         ? null
-                        : () => setState(_items.clear),
+                        : () {
+                            setState(_items.clear);
+                            _persistItems();
+                          },
                     style: TextButton.styleFrom(
                       foregroundColor: secondaryTextColor(context),
                       visualDensity: VisualDensity.compact,
@@ -131,7 +184,18 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               padding: const EdgeInsets.fromLTRB(22, 10, 22, 112),
               children: [
-                if (_items.isEmpty)
+                if (_loading)
+                  SoftCard(
+                    child: Text(
+                      'Loading your list...',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: secondaryTextColor(context),
+                        fontSize: 13,
+                      ),
+                    ),
+                  )
+                else if (_items.isEmpty)
                   SoftCard(
                     child: Text(
                       'Your list is empty. Add an essential above to get started.',
@@ -174,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 PrimaryButton(
                   label: 'Compare',
                   icon: CupertinoIcons.search,
-                  onPressed: widget.onOpenResults,
+                  onPressed: _loading ? () {} : () => _compare(),
                 ),
               ],
             ),
@@ -189,20 +253,22 @@ class _HomeScreenState extends State<HomeScreen> {
       item.quantity += amount;
       if (item.quantity <= 0) _items.remove(item);
     });
+    _persistItems();
   }
 
   void _removeItem(String name) {
     setState(() => _items.removeWhere((item) => item.name == name));
+    _persistItems();
   }
 
   Future<void> _refresh() async {
-    await Future<void>.delayed(const Duration(milliseconds: 850));
+    await _refreshFromApi();
     if (mounted) setState(() {});
   }
 
   Future<void> _editBudget() async {
     final controller = TextEditingController(
-      text: _budget.replaceAll('ZMW ', '').replaceAll(',', ''),
+      text: formatZmw(_budget ?? 0).replaceAll('ZMW ', '').replaceAll(',', ''),
     );
     final value = await showCupertinoDialog<String>(
       context: context,
@@ -233,7 +299,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (value != null && value.trim().isNotEmpty) {
-      setState(() => _budget = 'ZMW ${value.trim()}');
+      final parsed = parseMoney(value);
+      if (parsed != null) {
+        setState(() => _budget = parsed);
+        unawaited(_repos.settings.setBudget(parsed));
+      }
     }
   }
 
@@ -241,18 +311,54 @@ class _HomeScreenState extends State<HomeScreen> {
     final existing = _items.where((item) => item.name == name).firstOrNull;
     if (existing != null) {
       setState(() => existing.quantity++);
+      _persistItems();
       return;
     }
+    final category = _catalogByName[name]?.category ?? 'Essential Staples';
     setState(() {
       _items.add(
         GroceryItem(
           name: name,
-          category: 'Essential Staples',
-          icon: CupertinoIcons.bag_fill,
+          category: category,
+          icon: iconForCategory(category),
           quantity: 1,
         ),
       );
     });
+    _persistItems();
+  }
+
+  Future<void> _compare() async {
+    final result = ComparisonResult.compute(
+      basket: _items
+          .map(
+            (item) => ShoppingItem(
+              name: item.name,
+              category: item.category,
+              quantity: item.quantity,
+            ),
+          )
+          .toList(),
+      catalog: await _repos.catalog.products(),
+      stores: await _repos.catalog.stores(),
+      budget: _budget,
+    );
+    await _repos.comparisons.insert(result.toRecord());
+    if (!mounted) return;
+
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        pageBuilder: (_, _, _) => ResultsScreen(
+          result: result,
+          showLoading: true,
+          isDarkMode: widget.isDarkMode,
+          onThemeChanged: widget.onThemeChanged,
+          onTabSelected: widget.onTabSelected,
+        ),
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
   }
 }
 
@@ -340,11 +446,13 @@ class _BudgetCard extends StatelessWidget {
 
 class _SearchBar extends StatelessWidget {
   const _SearchBar({
+    required this.suggestions,
     required this.onAdd,
     required this.remove,
     required this.contains,
   });
 
+  final List<String> suggestions;
   final ValueChanged<String> onAdd;
   final ValueChanged<String> remove;
   final bool Function(String) contains;
@@ -354,8 +462,12 @@ class _SearchBar extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) =>
-          _SearchSheet(onAdd: onAdd, remove: remove, contains: contains),
+      builder: (sheetContext) => _SearchSheet(
+        suggestions: suggestions,
+        onAdd: onAdd,
+        remove: remove,
+        contains: contains,
+      ),
     );
   }
 
@@ -374,11 +486,13 @@ class _SearchBar extends StatelessWidget {
 
 class _SearchSheet extends StatefulWidget {
   const _SearchSheet({
+    required this.suggestions,
     required this.onAdd,
     required this.remove,
     required this.contains,
   });
 
+  final List<String> suggestions;
   final ValueChanged<String> onAdd;
   final ValueChanged<String> remove;
   final bool Function(String) contains;
@@ -392,12 +506,12 @@ class _SearchSheetState extends State<_SearchSheet> {
   final _added = <String>{};
   String _query = '';
 
-  List<String> get _suggestions {
+  List<String> get _results {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) {
-      return _grocerySuggestions.take(12).toList();
+      return widget.suggestions.take(12).toList();
     }
-    return _grocerySuggestions
+    return widget.suggestions
         .where((s) => s.toLowerCase().contains(q))
         .take(12)
         .toList();
@@ -489,7 +603,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                 SoftCard(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Column(
-                    children: _suggestions.map((name) {
+                    children: _results.map((name) {
                       final selected =
                           _added.contains(name) || widget.contains(name);
                       return ListTile(
@@ -519,7 +633,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                     }).toList(),
                   ),
                 ),
-                if (_query.trim().isNotEmpty && _suggestions.isEmpty) ...[
+                if (_query.trim().isNotEmpty && _results.isEmpty) ...[
                   const SizedBox(height: 10),
                   SoftCard(
                     child: Text(

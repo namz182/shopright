@@ -4,12 +4,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/money.dart';
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_top_bar.dart';
 import '../../core/widgets/ui_components.dart';
+import '../../data/local/models.dart';
+import 'comparison_result.dart';
 
 class ResultsScreen extends StatefulWidget {
   const ResultsScreen({
+    required this.result,
     required this.isDarkMode,
     required this.onThemeChanged,
     required this.onTabSelected,
@@ -17,6 +21,7 @@ class ResultsScreen extends StatefulWidget {
     super.key,
   });
 
+  final ComparisonResult result;
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
   final ValueChanged<AppTab> onTabSelected;
@@ -65,7 +70,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                           duration: const Duration(milliseconds: 250),
                           child: _loading
                               ? const _ResultsSkeleton()
-                              : _ResultsBody(onSelectItem: _showStorePrices),
+                              : _ResultsBody(
+                                  result: widget.result,
+                                  onSelectItem: _showStorePrices,
+                                ),
                         ),
                       ),
                     ],
@@ -88,32 +96,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
     );
   }
 
-  void _showStorePrices(String item) {
-    final prices = switch (item) {
-      'Breakfast Meal 25kg (x2)' => const [
-        ('Shoprite Ndola', 'ZMW 670.00'),
-        ('Local Market (Chifubu)', 'ZMW 690.00'),
-        ('Pick n Pay Copperbelt', 'ZMW 720.00'),
-        ('Melissa Supermarket', 'ZMW 710.00'),
-      ],
-      'Cooking Oil 2.5L' => const [
-        ('Local Market (Chifubu)', 'ZMW 135.00'),
-        ('Shoprite Ndola', 'ZMW 142.00'),
-        ('Pick n Pay Copperbelt', 'ZMW 149.00'),
-        ('Melissa Supermarket', 'ZMW 145.00'),
-      ],
-      _ => const [
-        ('Pick n Pay Copperbelt', 'ZMW 55.00'),
-        ('Shoprite Ndola', 'ZMW 59.00'),
-        ('Local Market (Chifubu)', 'ZMW 60.00'),
-        ('Melissa Supermarket', 'ZMW 63.00'),
-      ],
-    };
+  void _showStorePrices(ComparisonItem item) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => _StorePricesSheet(item: item, prices: prices),
+      builder: (context) => _StorePricesSheet(
+        item: itemLabel(item.productName, item.quantity),
+        prices: item.prices,
+      ),
     );
   }
 
@@ -123,6 +114,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
     if (mounted) setState(() => _loading = false);
   }
 }
+
+String itemLabel(String name, int quantity) =>
+    quantity > 1 ? '$name (x$quantity)' : name;
 
 class _ResultsHeader extends StatelessWidget {
   const _ResultsHeader({required this.onBack});
@@ -156,9 +150,10 @@ class _ResultsHeader extends StatelessWidget {
 }
 
 class _ResultsBody extends StatelessWidget {
-  const _ResultsBody({required this.onSelectItem});
+  const _ResultsBody({required this.result, required this.onSelectItem});
 
-  final ValueChanged<String> onSelectItem;
+  final ComparisonResult result;
+  final ValueChanged<ComparisonItem> onSelectItem;
 
   @override
   Widget build(BuildContext context) {
@@ -166,9 +161,9 @@ class _ResultsBody extends StatelessWidget {
       key: const ValueKey('results'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _ComparisonIdentity(),
+        _ComparisonIdentity(reference: result.reference),
         const SizedBox(height: 18),
-        const _LowestTotalCard(),
+        _LowestTotalCard(total: result.totalLowest),
         const SizedBox(height: 24),
         SectionLabel(
           'Lowest Price Per Item',
@@ -178,47 +173,47 @@ class _ResultsBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 11),
-        _LowestPriceCard(
-          item: 'Breakfast Meal 25kg (x2)',
-          store: 'Shoprite Ndola',
-          price: 'ZMW 670.00',
-          onTap: onSelectItem,
-        ),
-        const SizedBox(height: 9),
-        _LowestPriceCard(
-          item: 'Cooking Oil 2.5L',
-          store: 'Local Market (Chifubu)',
-          price: 'ZMW 135.00',
-          onTap: onSelectItem,
-        ),
-        const SizedBox(height: 9),
-        _LowestPriceCard(
-          item: 'White Sugar 2kg',
-          store: 'Pick n Pay',
-          price: 'ZMW 55.00',
-          onTap: onSelectItem,
-        ),
-        const SizedBox(height: 24),
+        for (final item in result.items) ...[
+          _LowestPriceCard(
+            item: itemLabel(item.productName, item.quantity),
+            store: item.storeName,
+            price: formatZmw(item.unitPrice),
+            onTap: () => onSelectItem(item),
+          ),
+          const SizedBox(height: 9),
+        ],
+        if (result.items.isNotEmpty) const SizedBox(height: 15),
         const SectionLabel('Total Basket By Shop'),
         const SizedBox(height: 11),
-        const _ShopTotals(),
+        _ShopTotals(
+          storeTotals: result.storeTotals,
+          totalLowest: result.totalLowest,
+        ),
+        if (result.budget != null) ...[
+          const SizedBox(height: 24),
+          SectionLabel('Budget Check'),
+          const SizedBox(height: 11),
+          _BudgetCheck(total: result.totalLowest, budget: result.budget!),
+        ],
       ],
     );
   }
 }
 
 class _ComparisonIdentity extends StatelessWidget {
-  const _ComparisonIdentity();
+  const _ComparisonIdentity({required this.reference});
+
+  final String reference;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'COMPARISON COMPLETE',
                 style: TextStyle(
                   color: AppColors.muted,
@@ -227,10 +222,10 @@ class _ComparisonIdentity extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'CMP-904-ZM21',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                reference,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
               ),
             ],
           ),
@@ -252,7 +247,9 @@ class _ComparisonIdentity extends StatelessWidget {
 }
 
 class _LowestTotalCard extends StatelessWidget {
-  const _LowestTotalCard();
+  const _LowestTotalCard({required this.total});
+
+  final double total;
 
   @override
   Widget build(BuildContext context) {
@@ -263,19 +260,19 @@ class _LowestTotalCard extends StatelessWidget {
         color: dark ? AppColors.brandDeep : AppColors.brand,
         borderRadius: BorderRadius.circular(25),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(
+          const Icon(
             CupertinoIcons.check_mark_circled_solid,
             color: AppColors.white,
             size: 26,
           ),
-          SizedBox(width: 14),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Total at lowest prices',
                   style: TextStyle(
                     color: AppColors.onBrandMuted,
@@ -283,10 +280,10 @@ class _LowestTotalCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'ZMW 860.00',
-                  style: TextStyle(
+                  formatZmw(total),
+                  style: const TextStyle(
                     color: AppColors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -312,12 +309,12 @@ class _LowestPriceCard extends StatelessWidget {
   final String item;
   final String store;
   final String price;
-  final ValueChanged<String> onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => onTap(item),
+      onTap: onTap,
       child: SoftCard(
         padding: const EdgeInsets.all(14),
         child: Row(
@@ -370,49 +367,50 @@ class _LowestPriceCard extends StatelessWidget {
 }
 
 class _ShopTotals extends StatelessWidget {
-  const _ShopTotals();
+  const _ShopTotals({required this.storeTotals, required this.totalLowest});
+
+  final List<StoreTotal> storeTotals;
+  final double totalLowest;
 
   @override
   Widget build(BuildContext context) {
-    return const SoftCard(
+    return SoftCard(
       child: Column(
         children: [
-          _ShopRow(
-            name: 'Shoprite Ndola',
-            distance: '2.1 km away',
-            total: 'ZMW 865.00',
-            difference: 'Recommended',
-          ),
-          Divider(height: 25),
-          _ShopRow(
-            name: 'Local Market (Chifubu)',
-            distance: '1.4 km away',
-            total: 'ZMW 880.00',
-            difference: '+ZMW 15.00',
-          ),
-          Divider(height: 25),
-          _ShopRow(
-            name: 'Pick n Pay Copperbelt',
-            distance: '3.8 km away',
-            total: 'ZMW 920.00',
-            difference: '+ZMW 55.00',
-          ),
+          for (final (index, store) in storeTotals.indexed) ...[
+            if (index > 0) const Divider(height: 25),
+            _ShopRow(
+              name: store.storeName,
+              distance: store.distanceKm != null
+                  ? '${_trimDistance(store.distanceKm!)} km away'
+                  : null,
+              total: formatZmw(store.total),
+              difference: index == 0
+                  ? 'Recommended'
+                  : formatZmwSigned(store.total - totalLowest),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
+String _trimDistance(double km) {
+  final text = km.toStringAsFixed(1);
+  return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+}
+
 class _ShopRow extends StatelessWidget {
   const _ShopRow({
     required this.name,
-    required this.distance,
     required this.total,
     required this.difference,
+    this.distance,
   });
 
   final String name;
-  final String distance;
+  final String? distance;
   final String total;
   final String difference;
 
@@ -431,11 +429,13 @@ class _ShopRow extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                distance,
-                style: const TextStyle(color: AppColors.muted, fontSize: 10),
-              ),
+              if (distance != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  distance!,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 10),
+                ),
+              ],
             ],
           ),
         ),
@@ -450,8 +450,12 @@ class _ShopRow extends StatelessWidget {
             Text(
               difference,
               style: TextStyle(
-                color: secondaryTextColor(context),
+                color: difference == 'Recommended'
+                    ? AppColors.brand
+                    : secondaryTextColor(context),
                 fontSize: 10,
+                fontWeight:
+                    difference == 'Recommended' ? FontWeight.w800 : null,
               ),
             ),
           ],
@@ -461,11 +465,59 @@ class _ShopRow extends StatelessWidget {
   }
 }
 
+class _BudgetCheck extends StatelessWidget {
+  const _BudgetCheck({required this.total, required this.budget});
+
+  final double total;
+  final double budget;
+
+  @override
+  Widget build(BuildContext context) {
+    final under = total <= budget;
+    final remaining = budget - total;
+    return SoftCard(
+      child: Row(
+        children: [
+          Icon(
+            under ? CupertinoIcons.check_mark_circled : CupertinoIcons.exclamationmark_triangle,
+            size: 22,
+            color: under ? AppColors.brand : const Color(0xFFE5484D),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  under
+                      ? 'Within your budget'
+                      : 'Over your budget',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  under
+                      ? '${formatZmw(remaining)} left'
+                      : '${formatZmw(remaining.abs())} over',
+                  style: const TextStyle(color: AppColors.muted, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StorePricesSheet extends StatelessWidget {
   const _StorePricesSheet({required this.item, required this.prices});
 
   final String item;
-  final List<(String, String)> prices;
+  final List<StorePrice> prices;
 
   @override
   Widget build(BuildContext context) {
@@ -508,7 +560,7 @@ class _StorePricesSheet extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             ...prices.asMap().entries.map((entry) {
-              final (store, price) = entry.value;
+              final price = entry.value;
               final lowest = entry.key == 0;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 9),
@@ -518,7 +570,7 @@ class _StorePricesSheet extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          store,
+                          price.storeName,
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
@@ -526,7 +578,7 @@ class _StorePricesSheet extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        price,
+                        formatZmw(price.amount),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w900,

@@ -2,10 +2,58 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/dates.dart';
+import '../../core/utils/money.dart';
 import '../../core/widgets/ui_components.dart';
+import '../../data/local/models.dart';
+import '../../data/repositories/repositories.dart';
 
-class HistoryScreen extends StatelessWidget {
-  const HistoryScreen({super.key});
+class HistoryScreen extends StatefulWidget {
+  const HistoryScreen({required this.repositories, super.key});
+
+  final Repositories repositories;
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  List<ComparisonRecord> _comparisons = const [];
+  ({double savings, int count}) _summary = (savings: 0, count: 0);
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final comparisons = await widget.repositories.comparisons.comparisons();
+      final summary = await widget.repositories.comparisons.monthSummary();
+      if (!mounted) return;
+      setState(() {
+        _comparisons = comparisons;
+        _summary = summary;
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refresh() async {
+    await _load();
+  }
+
+  Future<void> _delete(ComparisonRecord comparison) async {
+    await widget.repositories.comparisons.delete(comparison.id);
+    if (!mounted) return;
+    setState(() => _comparisons.removeWhere((c) => c.id == comparison.id));
+    final summary = await widget.repositories.comparisons.monthSummary();
+    if (mounted) setState(() => _summary = summary);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,30 +83,56 @@ class HistoryScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 24),
-                  _HistorySummary(),
+                  _HistorySummary(summary: _summary),
                   SizedBox(height: 24),
                   SectionLabel('Recent Comparisons'),
                   SizedBox(height: 11),
-                  _HistoryItem(
-                    id: 'CMP-904-ZM21',
-                    date: 'Today, 09:41',
-                    items: '3 items · 4 stores compared',
-                    total: 'ZMW 860.00',
-                  ),
-                  SizedBox(height: 10),
-                  _HistoryItem(
-                    id: 'CMP-882-ZM09',
-                    date: 'Yesterday, 16:18',
-                    items: '5 items · 3 stores compared',
-                    total: 'ZMW 1,245.50',
-                  ),
-                  SizedBox(height: 10),
-                  _HistoryItem(
-                    id: 'CMP-856-ZM72',
-                    date: '28 July 2026',
-                    items: '2 items · 4 stores compared',
-                    total: 'ZMW 395.00',
-                  ),
+                  if (_loading)
+                    SoftCard(
+                      child: Text(
+                        'Loading your comparisons...',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: secondaryTextColor(context),
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  else if (_comparisons.isEmpty)
+                    SoftCard(
+                      child: Text(
+                        'No comparisons yet. Run one from the home screen to see it here.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: secondaryTextColor(context),
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  else
+                    ..._comparisons.map(
+                      (comparison) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Dismissible(
+                          key: ValueKey(comparison.id),
+                          direction: DismissDirection.endToStart,
+                          onDismissed: (_) => _delete(comparison),
+                          background: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE5484D),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            padding: const EdgeInsets.only(right: 20),
+                            alignment: Alignment.centerRight,
+                            child: const Icon(
+                              CupertinoIcons.delete,
+                              color: Colors.white,
+                            ),
+                          ),
+                          child: _HistoryItem(comparison: comparison),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -69,11 +143,10 @@ class HistoryScreen extends StatelessWidget {
   }
 }
 
-Future<void> _refresh() =>
-    Future<void>.delayed(const Duration(milliseconds: 850));
-
 class _HistorySummary extends StatelessWidget {
-  const _HistorySummary();
+  const _HistorySummary({required this.summary});
+
+  final ({double savings, int count}) summary;
 
   @override
   Widget build(BuildContext context) {
@@ -84,30 +157,33 @@ class _HistorySummary extends StatelessWidget {
         color: dark ? AppColors.brandDeep : AppColors.brand,
         borderRadius: BorderRadius.circular(25),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(
+          const Icon(
             CupertinoIcons.chart_bar_alt_fill,
             color: AppColors.white,
             size: 25,
           ),
-          SizedBox(width: 14),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ZMW 215.00 saved',
-                  style: TextStyle(
+                  '${formatZmw(summary.savings)} saved',
+                  style: const TextStyle(
                     color: AppColors.white,
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  'From 3 comparisons this month',
-                  style: TextStyle(color: AppColors.onBrandMuted, fontSize: 11),
+                  'From ${summary.count} ${summary.count == 1 ? 'comparison' : 'comparisons'} this month',
+                  style: const TextStyle(
+                    color: AppColors.onBrandMuted,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -119,20 +195,13 @@ class _HistorySummary extends StatelessWidget {
 }
 
 class _HistoryItem extends StatelessWidget {
-  const _HistoryItem({
-    required this.id,
-    required this.date,
-    required this.items,
-    required this.total,
-  });
+  const _HistoryItem({required this.comparison});
 
-  final String id;
-  final String date;
-  final String items;
-  final String total;
+  final ComparisonRecord comparison;
 
   @override
   Widget build(BuildContext context) {
+    final storeCount = comparison.items.map((i) => i.storeName).toSet().length;
     return SoftCard(
       child: Row(
         children: [
@@ -143,7 +212,7 @@ class _HistoryItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  id,
+                  comparison.reference,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
@@ -151,7 +220,7 @@ class _HistoryItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  date,
+                  formatRelativeDateTime(comparison.createdAt),
                   style: TextStyle(
                     color: secondaryTextColor(context),
                     fontSize: 10,
@@ -159,14 +228,14 @@ class _HistoryItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  items,
+                  '${comparison.itemsCount} items · $storeCount stores compared',
                   style: const TextStyle(color: AppColors.muted, fontSize: 10),
                 ),
               ],
             ),
           ),
           Text(
-            total,
+            formatZmw(comparison.totalLowest),
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
           ),
         ],

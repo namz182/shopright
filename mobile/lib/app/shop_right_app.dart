@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../core/route_observer.dart';
 import '../core/theme/app_theme.dart';
+import '../data/repositories/repositories.dart';
 import '../features/root/root_shell.dart';
 
 class ShopRightApp extends StatefulWidget {
-  const ShopRightApp({super.key});
+  const ShopRightApp({required this.repositories, super.key});
+
+  final Repositories repositories;
 
   @override
   State<ShopRightApp> createState() => _ShopRightAppState();
@@ -24,6 +27,7 @@ class _ShopRightAppState extends State<ShopRightApp> {
       themeMode: _themeMode,
       navigatorObservers: [appRouteObserver],
       home: RootShell(
+        repositories: widget.repositories,
         isDarkMode: _themeMode == ThemeMode.dark,
         onThemeChanged: (isDark) {
           setState(
