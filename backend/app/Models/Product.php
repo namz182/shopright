@@ -12,6 +12,11 @@ class Product extends Model
     protected $fillable = [
         'category_id',
         'name',
+        'brand',
+        'quantity',
+        'quantity_unit',
+        'barcode',
+        'description',
         'unit',
         'icon',
         'active',
@@ -25,6 +30,11 @@ class Product extends Model
     public function prices(): HasMany
     {
         return $this->hasMany(Price::class);
+    }
+
+    public function storeProducts(): HasMany
+    {
+        return $this->hasMany(StoreProduct::class);
     }
 
     public function scopeActive(Builder $query): Builder

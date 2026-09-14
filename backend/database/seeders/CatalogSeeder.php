@@ -6,6 +6,9 @@ use App\Models\Category;
 use App\Models\Price;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\StoreProduct;
+use App\Models\Province;
+use App\Models\District;
 use Illuminate\Database\Seeder;
 
 class CatalogSeeder extends Seeder
@@ -36,7 +39,10 @@ class CatalogSeeder extends Seeder
 
         $categories = [];
         foreach ($names as $name => $slug) {
-            $categories[$name] = Category::create(['name' => $name, 'slug' => $slug]);
+            $categories[$name] = Category::updateOrCreate(
+                ['slug' => $slug],
+                ['name' => $name],
+            );
         }
 
         return $categories;
@@ -73,12 +79,14 @@ class CatalogSeeder extends Seeder
 
         $products = [];
         foreach ($rows as $row) {
-            $products[$row['name']] = Product::create([
-                'name' => $row['name'],
-                'unit' => $row['unit'],
-                'icon' => $row['icon'],
-                'category_id' => $categories[$row['category']]->id,
-            ]);
+            $products[$row['name']] = Product::updateOrCreate(
+                ['name' => $row['name']],
+                [
+                    'unit' => $row['unit'],
+                    'icon' => $row['icon'],
+                    'category_id' => $categories[$row['category']]->id,
+                ],
+            );
         }
 
         return $products;
@@ -90,20 +98,24 @@ class CatalogSeeder extends Seeder
     private function stores(): array
     {
         $rows = [
-            ['name' => 'Shoprite Ndola', 'location' => 'Ndola, Copperbelt', 'distance_km' => 2.1],
-            ['name' => 'Local Market (Chifubu)', 'location' => 'Chifubu, Ndola', 'distance_km' => 1.4],
-            ['name' => 'Pick n Pay Copperbelt', 'location' => 'Ndola, Copperbelt', 'distance_km' => 3.8],
-            ['name' => 'Melissa Supermarket', 'location' => 'Ndola, Copperbelt', 'distance_km' => 4.5],
+            ['name' => 'Shoprite Ndola', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola', 'distance_km' => 2.1],
+            ['name' => 'Local Market (Chifubu)', 'location' => 'Chifubu, Ndola', 'province' => 'Copperbelt', 'district' => 'Ndola', 'distance_km' => 1.4],
+            ['name' => 'Pick n Pay Copperbelt', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola', 'distance_km' => 3.8],
+            ['name' => 'Melissa Supermarket', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola', 'distance_km' => 4.5],
         ];
 
         $stores = [];
         foreach ($rows as $row) {
-            $stores[$row['name']] = Store::create([
-                'name' => $row['name'],
-                'slug' => str($row['name'])->slug(),
-                'location' => $row['location'],
-                'distance_km' => $row['distance_km'],
-            ]);
+            $stores[$row['name']] = Store::updateOrCreate(
+                ['slug' => str($row['name'])->slug()],
+                [
+                    'name' => $row['name'],
+                    'province_id' => Province::where('name', $row['province'])->value('id'),
+                    'district_id' => District::where('name', $row['district'])->whereHas('province', fn ($query) => $query->where('name', $row['province']))->value('id'),
+                    'location' => $row['location'],
+                    'distance_km' => $row['distance_km'],
+                ],
+            );
         }
 
         return $stores;
@@ -125,13 +137,14 @@ class CatalogSeeder extends Seeder
 
         foreach ($matrix as $productName => $storePrices) {
             foreach ($storePrices as $storeName => $amount) {
-                Price::create([
-                    'product_id' => $products[$productName]->id,
-                    'store_id' => $stores[$storeName]->id,
-                    'amount' => $amount,
-                    'currency' => 'ZMW',
-                    'recorded_at' => now(),
-                ]);
+                Price::updateOrCreate(
+                    ['product_id' => $products[$productName]->id, 'store_id' => $stores[$storeName]->id],
+                    ['amount' => $amount, 'currency' => 'ZMW', 'recorded_at' => now(), 'active' => true],
+                );
+                StoreProduct::updateOrCreate(
+                    ['product_id' => $products[$productName]->id, 'store_id' => $stores[$storeName]->id],
+                    ['price' => $amount, 'currency' => 'ZMW', 'available' => true, 'price_updated_at' => now()],
+                );
             }
         }
     }
