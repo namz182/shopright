@@ -1,7 +1,7 @@
 @extends('layouts.brand', ['title' => 'Register | Shop Right', 'showNav' => true])
 @section('content')
 <main class="form-page"><section class="card form-card">
-    <a href="{{ url('/') }}" class="logo"><img class="logo-img" src="{{ asset('images/shop-right-mark.svg') }}" alt=""><span>shop right</span></a>
+    <a href="{{ url('/') }}" class="logo"><img class="logo-img" src="{{ asset('images/shop-right-icon.png') }}" alt=""><span>shop right</span></a>
     <h1>List your prices.</h1><p class="muted">Join Shop Right as a store partner. Your products stay connected to one shared catalog.</p>
     <form method="POST" action="{{ route('register.store') }}">@csrf
         <div class="field"><label for="shop_name">Shop name</label><input id="shop_name" name="shop_name" value="{{ old('shop_name') }}" placeholder="e.g. Shop Right Ndola" required>@error('shop_name')<div class="error">{{ $message }}</div>@enderror</div>
