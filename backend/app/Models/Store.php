@@ -11,6 +11,8 @@ class Store extends Model
     protected $fillable = [
         'name',
         'slug',
+        'province_id',
+        'district_id',
         'location',
         'address',
         'distance_km',
@@ -20,6 +22,26 @@ class Store extends Model
     public function prices(): HasMany
     {
         return $this->hasMany(Price::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(StoreProduct::class);
+    }
+
+    public function owners(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function province(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Province::class);
+    }
+
+    public function district(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(District::class);
     }
 
     public function scopeActive(Builder $query): Builder

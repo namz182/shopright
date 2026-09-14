@@ -10,12 +10,12 @@ use Illuminate\Http\Request;
 class CatalogController extends Controller
 {
     /**
-     * List active products with their category and per-store prices.
+     * List active products with their category and current store listings.
      */
     public function products(Request $request): JsonResponse
     {
         $products = Product::query()
-            ->with(['category', 'prices' => fn ($q) => $q->where('active', true)->with('store')])
+            ->with(['category', 'storeProducts' => fn ($q) => $q->where('available', true)->whereNotNull('price')->with('store')])
             ->active()
             ->search($request->query('search'))
             ->orderBy('name')
@@ -31,7 +31,7 @@ class CatalogController extends Controller
      */
     public function show(Request $request, Product $product): JsonResponse
     {
-        $product->load(['category', 'prices' => fn ($q) => $q->where('active', true)->with('store')]);
+        $product->load(['category', 'storeProducts' => fn ($q) => $q->where('available', true)->whereNotNull('price')->with('store')]);
 
         return response()->json(['data' => $this->serializeProduct($product)]);
     }
@@ -62,11 +62,11 @@ class CatalogController extends Controller
             'icon' => $product->icon,
             'category_id' => $product->category_id,
             'category' => $product->category?->name,
-            'prices' => $product->prices->map(fn ($price) => [
-                'store_id' => $price->store_id,
-                'store' => $price->store?->name,
-                'amount' => (float) $price->amount,
-                'currency' => $price->currency,
+            'prices' => $product->storeProducts->map(fn ($listing) => [
+                'store_id' => $listing->store_id,
+                'store' => $listing->store?->name,
+                'amount' => (float) $listing->price,
+                'currency' => $listing->currency,
             ])->values(),
         ];
     }
