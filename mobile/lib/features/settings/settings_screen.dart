@@ -29,6 +29,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late bool _isDarkMode = widget.isDarkMode;
   UserLocation _location = const UserLocation();
+  bool _locationLoading = false;
 
   @override
   void initState() {
@@ -119,19 +120,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: CupertinoIcons.location_solid,
                         label: 'Location',
                         value: _location.label,
-                        onTap: _chooseLocation,
+                        onTap: _locationLoading ? null : _chooseLocation,
+                        loading: _locationLoading,
                       ),
                       _SettingsAction(
                         icon: CupertinoIcons.bell_fill,
                         label: 'Price alerts',
                         value: 'On',
                         onTap: () => _showMessage(context, 'Price alerts'),
-                      ),
-                      _SettingsAction(
-                        icon: CupertinoIcons.money_dollar_circle_fill,
-                        label: 'Currency',
-                        value: 'ZMW',
-                        onTap: () => _showMessage(context, 'Currency'),
                       ),
                     ],
                   ),
@@ -168,6 +164,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _chooseLocation() async {
+    if (_locationLoading) return;
+    setState(() => _locationLoading = true);
     final api = ShopRightApi();
     try {
       final provinces = await api.fetchProvinces();
@@ -197,6 +195,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (_) {
       if (mounted) _showMessage(context, 'Location unavailable');
+    } finally {
+      if (mounted) setState(() => _locationLoading = false);
     }
   }
 
@@ -226,17 +226,20 @@ class _SettingsAction extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.value,
+    this.loading = false,
   });
 
   final IconData icon;
   final String label;
   final String? value;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
@@ -252,7 +255,9 @@ class _SettingsAction extends StatelessWidget {
                 ),
               ),
             ),
-            if (value != null)
+            if (loading)
+              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            else if (value != null)
               Text(
                 value!,
                 style: TextStyle(

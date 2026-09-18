@@ -162,6 +162,10 @@ class _ResultsBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ComparisonIdentity(reference: result.reference),
+        if (result.unavailableProducts.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _UnavailableProductsCard(products: result.unavailableProducts),
+        ],
         const SizedBox(height: 18),
         _LowestTotalCard(total: result.totalLowest),
         const SizedBox(height: 24),
@@ -200,6 +204,51 @@ class _ResultsBody extends StatelessWidget {
   }
 }
 
+class _UnavailableProductsCard extends StatelessWidget {
+  const _UnavailableProductsCard({required this.products});
+
+  final List<String> products;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF3A2B20)
+            : const Color(0xFFFFF4E8),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF765338)
+              : const Color(0xFFF1C38F),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            CupertinoIcons.info_circle_fill,
+            size: 18,
+            color: Color(0xFFC87524),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${products.join(', ')} ${products.length == 1 ? 'was' : 'were'} not found in any store in your selected location.',
+              style: const TextStyle(
+                fontSize: 11,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ComparisonIdentity extends StatelessWidget {
   const _ComparisonIdentity({required this.reference});
 
@@ -225,7 +274,10 @@ class _ComparisonIdentity extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 reference,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           ),
@@ -437,8 +489,9 @@ class _ShopRow extends StatelessWidget {
                     ? AppColors.brand
                     : secondaryTextColor(context),
                 fontSize: 10,
-                fontWeight:
-                    difference == 'Recommended' ? FontWeight.w800 : null,
+                fontWeight: difference == 'Recommended'
+                    ? FontWeight.w800
+                    : null,
               ),
             ),
           ],
@@ -462,7 +515,9 @@ class _BudgetCheck extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            under ? CupertinoIcons.check_mark_circled : CupertinoIcons.exclamationmark_triangle,
+            under
+                ? CupertinoIcons.check_mark_circled
+                : CupertinoIcons.exclamationmark_triangle,
             size: 22,
             color: under ? AppColors.brand : const Color(0xFFE5484D),
           ),
@@ -472,9 +527,7 @@ class _BudgetCheck extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  under
-                      ? 'Within your budget'
-                      : 'Over your budget',
+                  under ? 'Within your budget' : 'Over your budget',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,

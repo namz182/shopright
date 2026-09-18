@@ -59,17 +59,19 @@ class SoftCard extends StatelessWidget {
   const SoftCard({
     required this.child,
     this.padding = const EdgeInsets.all(16),
+    this.color,
     super.key,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: dark ? AppColors.nightCard : AppColors.surface,
+      color: color ?? (dark ? AppColors.nightCard : AppColors.surface),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(
@@ -92,7 +94,7 @@ class PrimaryButton extends StatelessWidget {
 
   final String label;
   final IconData icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool light;
 
   @override
