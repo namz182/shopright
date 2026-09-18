@@ -44,13 +44,39 @@ class StoreInfo {
     required this.id,
     required this.name,
     this.location,
-    this.distanceKm,
+    this.provinceId,
+    this.districtId,
   });
 
   final int id;
   final String name;
   final String? location;
-  final double? distanceKm;
+  final int? provinceId;
+  final int? districtId;
+}
+
+class ProvinceInfo {
+  const ProvinceInfo({required this.id, required this.name, this.code});
+  final int id;
+  final String name;
+  final String? code;
+}
+
+class DistrictInfo {
+  const DistrictInfo({required this.id, required this.provinceId, required this.name});
+  final int id;
+  final int provinceId;
+  final String name;
+}
+
+class UserLocation {
+  const UserLocation({this.provinceId, this.provinceName, this.districtId, this.districtName});
+  final int? provinceId;
+  final String? provinceName;
+  final int? districtId;
+  final String? districtName;
+  bool get isSelected => provinceId != null && districtId != null;
+  String get label => isSelected ? '$districtName, $provinceName' : 'Choose your location';
 }
 
 class ShoppingItem {

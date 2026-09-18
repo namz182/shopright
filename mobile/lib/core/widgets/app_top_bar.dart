@@ -1,70 +1,59 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-
 class AppTopBar extends StatelessWidget {
-  const AppTopBar({this.trailing, super.key});
+  const AppTopBar({required this.title, this.subtitle, this.trailing, super.key});
 
+  final String title;
+  final String? subtitle;
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         const AppLogo(),
         const SizedBox(width: 10),
-        const Text(
-          'Shop Right',
-          style: TextStyle(
-            fontSize: 19,
-            letterSpacing: -.35,
-            fontWeight: FontWeight.w900,
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 19,
+                  letterSpacing: -.35,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 1),
+                Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF7B8494),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        const Spacer(),
-        trailing ??
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: dark ? AppColors.nightInput : AppColors.soft,
-                shape: BoxShape.circle,
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.bell,
-                    size: 18,
-                    color: dark ? AppColors.white : AppColors.ink,
-                  ),
-                  Positioned(
-                    right: 10,
-                    top: 9,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: dark ? AppColors.white : AppColors.ink,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: dark ? AppColors.nightInput : AppColors.soft,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        const SizedBox(width: 10),
+        trailing ?? const SizedBox(width: 40),
       ],
     );
   }
 }
 
 class AppStickyTopBar extends StatelessWidget {
-  const AppStickyTopBar({super.key});
+  const AppStickyTopBar({required this.title, this.subtitle, super.key});
+
+  final String title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -74,10 +63,10 @@ class AppStickyTopBar extends StatelessWidget {
       right: 0,
       child: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        child: const SafeArea(
+        child: SafeArea(
           child: Padding(
             padding: EdgeInsets.fromLTRB(22, 12, 22, 8),
-            child: AppTopBar(),
+            child: AppTopBar(title: title, subtitle: subtitle),
           ),
         ),
       ),

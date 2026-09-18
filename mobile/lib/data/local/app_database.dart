@@ -5,7 +5,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'seed_data.dart';
 
 /// Local SQLite store for the catalog cache, comparison history, shopping
 /// list and budget. Falls back to a bundled sample catalog when offline.
@@ -14,7 +13,7 @@ class AppDatabase {
 
   final Database _db;
 
-  static const _version = 1;
+  static const _version = 5;
   static const _fileName = 'shopright.db';
 
   /// Opens (creating if needed) the local database and seeds it with the
@@ -33,6 +32,7 @@ class AppDatabase {
           await _createSchema(db);
           await _seed(db);
         },
+        onUpgrade: _upgrade,
       ),
     );
 
@@ -86,7 +86,8 @@ class AppDatabase {
         name TEXT NOT NULL,
         slug TEXT NOT NULL UNIQUE,
         location TEXT,
-        distance_km REAL,
+        province_id INTEGER,
+        district_id INTEGER,
         active INTEGER NOT NULL DEFAULT 1
       )
     ''');
@@ -142,104 +143,38 @@ class AppDatabase {
     ''');
   }
 
+  static Future<void> _upgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE stores ADD COLUMN province_id INTEGER');
+      await db.execute('ALTER TABLE stores ADD COLUMN district_id INTEGER');
+      await db.delete('shopping_items');
+      await db.insert('settings', {'key': 'budget', 'value': '0'}, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    if (oldVersion < 3) {
+      await db.update(
+        'stores',
+        {'province_id': 2, 'district_id': 10},
+        where: "location LIKE ? OR location LIKE ?",
+        whereArgs: ['%Copperbelt%', '%Ndola%'],
+      );
+    }
+    if (oldVersion < 4) {
+      await db.delete('prices');
+      await db.delete('products');
+      await db.delete('stores');
+      await db.delete('categories');
+    }
+    if (oldVersion < 5) {
+      await db.execute('ALTER TABLE stores DROP COLUMN distance_km');
+    }
+  }
+
   static Future<void> _seed(Database db) async {
-    final productCount = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM products'),
-        ) ??
-        0;
-    if (productCount > 0) {
-      return;
-    }
-
-    await db.transaction((txn) async {
-      final categoryIds = <String, int>{};
-      for (final (name, slug) in SeedData.categories) {
-        final id = await txn.insert('categories', {'name': name, 'slug': slug});
-        categoryIds[name] = id;
-      }
-
-      final productIds = <String, int>{};
-      for (final product in SeedData.products) {
-        final id = await txn.insert('products', {
-          'name': product['name'],
-          'unit': product['unit'],
-          'icon': product['icon'],
-          'category_id': categoryIds[product['category']],
-        });
-        productIds[product['name']!] = id;
-      }
-
-      final storeIds = <String, int>{};
-      for (final store in SeedData.stores) {
-        final id = await txn.insert('stores', {
-          'name': store['name'],
-          'slug': store['slug'],
-          'location': store['location'],
-          'distance_km': store['distance_km'],
-        });
-        storeIds[store['name'] as String] = id;
-      }
-
-      for (final MapEntry<String, Map<String, double>> entry
-          in SeedData.prices.entries) {
-        for (final MapEntry<String, double> price in entry.value.entries) {
-          await txn.insert('prices', {
-            'product_id': productIds[entry.key],
-            'store_id': storeIds[price.key],
-            'amount': price.value,
-            'currency': 'ZMW',
-            'recorded_at': DateTime.now().toIso8601String(),
-          });
-        }
-      }
-
-      await txn.insert('settings', {
-        'key': 'budget',
-        'value': '${SeedData.budget}',
-      });
-
-      for (final item in SeedData.shoppingList) {
-        await txn.insert('shopping_items', {
-          'name': item.name,
-          'category': item.category,
-          'quantity': item.quantity,
-        });
-      }
-
-      await _seedComparisons(txn);
-    });
+    await db.insert(
+      'settings',
+      {'key': 'budget', 'value': '0'},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  static Future<void> _seedComparisons(DatabaseExecutor txn) async {
-    final now = DateTime.now();
-    for (final sample in SeedData.sampleComparisons) {
-      final createdAt = switch (sample['created_at']) {
-        null => now,
-        'yesterday' => now.subtract(const Duration(days: 1)),
-        final String value => DateTime.tryParse(value) ?? now,
-        _ => now,
-      };
-      final comparisonId = await txn.insert('comparisons', {
-        'reference': sample['reference'],
-        'currency': 'ZMW',
-        'budget': sample['budget'],
-        'total_lowest': sample['total_lowest'],
-        'total_cheapest_store': sample['total_cheapest_store'],
-        'total_savings': sample['total_savings'],
-        'items_count': sample['items_count'],
-        'created_at': createdAt.toUtc().toIso8601String(),
-      });
-      for (final item in sample['items'] as List<Map<String, dynamic>>) {
-        await txn.insert('comparison_items', {
-          'comparison_id': comparisonId,
-          'product_name': item['product_name'],
-          'product_unit': item['product_unit'],
-          'quantity': item['quantity'],
-          'store_name': item['store_name'],
-          'unit_price': item['unit_price'],
-          'line_total': item['line_total'],
-        });
-      }
-    }
-  }
 }

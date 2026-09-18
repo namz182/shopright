@@ -9,6 +9,7 @@ import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/ui_components.dart';
 import '../../data/local/models.dart';
 import '../../data/repositories/repositories.dart';
+import '../../data/repositories/data_sources.dart';
 import '../results/comparison_result.dart';
 import '../results/results_screen.dart';
 
@@ -60,26 +61,33 @@ class _HomeScreenState extends State<HomeScreen> {
   Repositories get _repos => widget.repositories;
 
   double? _budget;
+  UserLocation _location = const UserLocation();
   bool _loading = true;
+  bool _comparisonLoading = false;
   List<String> _catalogNames = const [];
   Map<String, GroceryProduct> _catalogByName = const {};
+  String? _catalogError;
   final _items = <GroceryItem>[];
 
   @override
   void initState() {
     super.initState();
     _load();
-    unawaited(_refreshFromApi());
   }
 
   Future<void> _load() async {
     try {
       final budget = await _repos.settings.budget();
       final savedItems = await _repos.settings.shoppingItems();
-      final products = await _repos.catalog.products();
+      final location = await _repos.settings.location();
+      final products = await _repos.catalog.productsForLocation(
+        provinceId: location.provinceId,
+        districtId: location.districtId,
+      );
       if (!mounted) return;
       setState(() {
         _budget = budget;
+        _location = location;
         _items
           ..clear()
           ..addAll(
@@ -94,19 +102,12 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         _catalogNames = products.map((p) => p.name).toList();
         _catalogByName = {for (final p in products) p.name: p};
+        _catalogError = null;
         _loading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _refreshFromApi() async {
-    try {
-      await _repos.catalog.refreshFromApi();
-      await _load();
-    } catch (_) {
-      // Offline — keep using the local cache.
+    } catch (error) {
+      debugPrint('[ShopRight Home] product load failed: $error');
+      if (mounted) setState(() { _loading = false; _catalogError = 'Unable to load products. Check that the backend is running and reachable.'; });
     }
   }
 
@@ -137,17 +138,24 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _BudgetCard(
-                  budget: formatZmw(_budget ?? 0),
-                  onEdit: _editBudget,
-                ),
-                const SizedBox(height: 20),
                 _SearchBar(
                   suggestions: _catalogNames,
                   onAdd: _quickAdd,
                   remove: _removeItem,
                   contains: (name) => _items.any((item) => item.name == name),
                 ),
+                if (_catalogError != null) ...[
+                  const SizedBox(height: 10),
+                  IllustratedEmptyState(
+                    icon: CupertinoIcons.wifi_exclamationmark,
+                    title: 'Products are unavailable',
+                    message: _catalogError!,
+                    accent: const Color(0xFFE5484D),
+                    compact: true,
+                    actionLabel: 'Retry',
+                    onAction: () => _load(),
+                  ),
+                ],
                 const SizedBox(height: 23),
                 SectionLabel(
                   'Your Shopping List (${_items.length} Items)',
@@ -178,6 +186,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: RefreshIndicator.adaptive(
             onRefresh: _refresh,
+            edgeOffset: 86,
+            displacement: 110,
+            color: AppColors.brand,
             child: ListView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
@@ -196,15 +207,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   )
                 else if (_items.isEmpty)
-                  SoftCard(
-                    child: Text(
-                      'Your list is empty. Add an essential above to get started.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: secondaryTextColor(context),
-                        fontSize: 13,
-                      ),
-                    ),
+                  const IllustratedEmptyState(
+                    icon: CupertinoIcons.cart,
+                    title: 'Build your shopping list',
+                    message: 'Add products above, then compare prices across stores in your area.',
+                    accent: AppColors.brand,
                   )
                 else
                   ..._items.map(
@@ -234,12 +241,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                const SizedBox(height: 8),
-                PrimaryButton(
-                  label: 'Compare',
-                  icon: CupertinoIcons.search,
-                  onPressed: _loading ? () {} : () => _compare(),
-                ),
+                if (_items.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  PrimaryButton(
+                    label: _comparisonLoading ? 'Comparing...' : 'Compare',
+                    icon: _comparisonLoading ? CupertinoIcons.hourglass : CupertinoIcons.search,
+                    onPressed: _loading || _comparisonLoading ? null : _compare,
+                  ),
+                ],
               ],
             ),
           ),
@@ -262,49 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refresh() async {
-    await _refreshFromApi();
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _editBudget() async {
-    final controller = TextEditingController(
-      text: formatZmw(_budget ?? 0).replaceAll('ZMW ', '').replaceAll(',', ''),
-    );
-    final value = await showCupertinoDialog<String>(
-      context: context,
-      builder: (dialogContext) => CupertinoAlertDialog(
-        title: const Text('Edit target budget'),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: CupertinoTextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            prefix: const Padding(
-              padding: EdgeInsets.only(left: 8),
-              child: Text('ZMW '),
-            ),
-          ),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (value != null && value.trim().isNotEmpty) {
-      final parsed = parseMoney(value);
-      if (parsed != null) {
-        setState(() => _budget = parsed);
-        unawaited(_repos.settings.setBudget(parsed));
-      }
-    }
+    await _load();
   }
 
   void _quickAdd(String name) {
@@ -329,118 +296,70 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _compare() async {
-    final result = ComparisonResult.compute(
-      basket: _items
-          .map(
-            (item) => ShoppingItem(
-              name: item.name,
-              category: item.category,
-              quantity: item.quantity,
-            ),
-          )
-          .toList(),
-      catalog: await _repos.catalog.products(),
-      stores: await _repos.catalog.stores(),
-      budget: _budget,
+    final budget = await showModalBottomSheet<double>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _BudgetSheet(initialBudget: _budget ?? 0),
     );
-    await _repos.comparisons.insert(result.toRecord());
-    if (!mounted) return;
-
-    Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (_, _, _) => ResultsScreen(
-          result: result,
-          showLoading: true,
-          isDarkMode: widget.isDarkMode,
-          onThemeChanged: widget.onThemeChanged,
-          onTabSelected: widget.onTabSelected,
-        ),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-    );
+    if (budget == null || !mounted) return;
+    setState(() => _comparisonLoading = true);
+    try {
+      final basket = _items.map((item) => ShoppingItem(name: item.name, category: item.category, quantity: item.quantity)).toList();
+      final catalog = await _repos.catalog.productsForLocation(provinceId: _location.provinceId, districtId: _location.districtId);
+      final stores = await _repos.catalog.storesForLocation(provinceId: _location.provinceId, districtId: _location.districtId);
+      final result = ComparisonResult.compute(basket: basket, catalog: catalog, stores: stores, budget: budget);
+      await _repos.settings.setBudget(budget);
+      await _repos.comparisons.insert(result.toRecord());
+      if (!mounted) return;
+      setState(() => _budget = budget);
+      Navigator.of(context).push(PageRouteBuilder<void>(
+        pageBuilder: (_, _, _) => ResultsScreen(result: result, showLoading: true, isDarkMode: widget.isDarkMode, onThemeChanged: widget.onThemeChanged, onTabSelected: widget.onTabSelected),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
+      ));
+    } catch (error) {
+      debugPrint('[ShopRight Home] comparison failed: $error');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not compare prices. Check your connection and try again.')));
+    } finally {
+      if (mounted) setState(() => _comparisonLoading = false);
+    }
   }
 }
 
-class _BudgetCard extends StatelessWidget {
-  const _BudgetCard({required this.budget, required this.onEdit});
+class _BudgetSheet extends StatefulWidget {
+  const _BudgetSheet({required this.initialBudget});
+  final double initialBudget;
+  @override
+  State<_BudgetSheet> createState() => _BudgetSheetState();
+}
 
-  final String budget;
-  final VoidCallback onEdit;
+class _BudgetSheetState extends State<_BudgetSheet> {
+  late final TextEditingController _controller = TextEditingController(text: widget.initialBudget == 0 ? '' : widget.initialBudget.toStringAsFixed(2));
+  bool _submitting = false;
 
   @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [Color(0xFF527B4A), Color(0xFF3F6239)]
-              : const [AppColors.brand, Color(0xFF7AA86E)],
-        ),
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Target Budget',
-                      style: TextStyle(
-                        color: AppColors.onBrandMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            budget,
-                            style: TextStyle(
-                              color: AppColors.white,
-                              fontSize: 24,
-                              letterSpacing: -.5,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              FilledButton(
-                onPressed: onEdit,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.white,
-                  foregroundColor: AppColors.ink,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
-                  ),
-                  minimumSize: Size.zero,
-                  shape: const StadiumBorder(),
-                ),
-                child: const Text(
-                  'Edit',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  void dispose() { _controller.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.fromLTRB(22, 18, 22, MediaQuery.viewInsetsOf(context).bottom + 22),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 38, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(8)))),
+          const SizedBox(height: 22),
+          const Text('Set a budget', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 6),
+          Text('Add a budget for this comparison. Use 0 if you only want the price stats.', style: TextStyle(color: secondaryTextColor(context), fontSize: 12)),
+          const SizedBox(height: 18),
+          TextField(controller: _controller, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(prefixText: 'ZMW ', labelText: 'Budget amount')),
+          const SizedBox(height: 16),
+          SizedBox(width: double.infinity, child: FilledButton(onPressed: _submitting ? null : _submit, child: _submitting ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Compare prices'))),
+        ]),
+      );
+
+  void _submit() {
+    final budget = parseMoney(_controller.text) ?? 0;
+    setState(() => _submitting = true);
+    Navigator.pop(context, budget);
   }
 }
 
@@ -635,15 +554,12 @@ class _SearchSheetState extends State<_SearchSheet> {
                 ),
                 if (_query.trim().isNotEmpty && _results.isEmpty) ...[
                   const SizedBox(height: 10),
-                  SoftCard(
-                    child: Text(
-                      'No matches for "${_query.trim()}".',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: secondaryTextColor(context),
-                        fontSize: 13,
-                      ),
-                    ),
+                  IllustratedEmptyState(
+                    icon: CupertinoIcons.search,
+                    title: 'No products found',
+                    message: 'Try a shorter name or search for another grocery item.',
+                    compact: true,
+                    accent: AppColors.muted,
                   ),
                 ],
               ],

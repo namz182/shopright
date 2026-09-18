@@ -14,9 +14,13 @@ class Store extends Model
         'province_id',
         'district_id',
         'location',
-        'address',
-        'distance_km',
         'active',
+    ];
+
+    protected $casts = [
+        'province_id' => 'integer',
+        'district_id' => 'integer',
+        'active' => 'boolean',
     ];
 
     public function prices(): HasMany

@@ -23,7 +23,6 @@ class StoresTable
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('province.name')->label('Province')->sortable(),
                 TextColumn::make('district.name')->label('District')->sortable(),
-                TextColumn::make('distance_km')->suffix(' km')->sortable(),
                 IconColumn::make('active')->boolean(),
             ])
             ->filters([

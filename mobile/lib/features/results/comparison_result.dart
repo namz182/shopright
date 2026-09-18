@@ -13,6 +13,7 @@ class ComparisonResult {
     required this.createdAt,
     required this.items,
     required this.storeTotals,
+    this.unavailableProducts = const [],
     this.budget,
   });
 
@@ -26,6 +27,7 @@ class ComparisonResult {
   final DateTime createdAt;
   final List<ComparisonItem> items;
   final List<StoreTotal> storeTotals;
+  final List<String> unavailableProducts;
 
   /// Finds the cheapest store per item and totals per store.
   factory ComparisonResult.compute({
@@ -37,9 +39,11 @@ class ComparisonResult {
     final byName = {for (final product in catalog) product.name: product};
 
     final items = <ComparisonItem>[];
+    final unavailableProducts = <String>[];
     for (final entry in basket) {
       final product = byName[entry.name];
       if (product == null || product.prices.isEmpty) {
+        unavailableProducts.add(entry.name);
         continue;
       }
       final sorted = [...product.prices]
@@ -86,7 +90,6 @@ class ComparisonResult {
       storeTotals.add(
         StoreTotal(
           storeName: store.name,
-          distanceKm: store.distanceKm,
           total: total,
           coveredItems: covered,
         ),
@@ -110,6 +113,7 @@ class ComparisonResult {
       createdAt: DateTime.now(),
       items: items,
       storeTotals: storeTotals,
+      unavailableProducts: unavailableProducts,
     );
   }
 
@@ -174,11 +178,9 @@ class StoreTotal {
     required this.storeName,
     required this.total,
     required this.coveredItems,
-    this.distanceKm,
   });
 
   final String storeName;
-  final double? distanceKm;
   final double total;
 
   /// How many basket items this store had a price for.

@@ -19,7 +19,6 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   List<ComparisonRecord> _comparisons = const [];
-  ({double savings, int count}) _summary = (savings: 0, count: 0);
   bool _loading = true;
 
   @override
@@ -31,11 +30,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _load() async {
     try {
       final comparisons = await widget.repositories.comparisons.comparisons();
-      final summary = await widget.repositories.comparisons.monthSummary();
       if (!mounted) return;
       setState(() {
         _comparisons = comparisons;
-        _summary = summary;
         _loading = false;
       });
     } catch (_) {
@@ -51,14 +48,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     await widget.repositories.comparisons.delete(comparison.id);
     if (!mounted) return;
     setState(() => _comparisons.removeWhere((c) => c.id == comparison.id));
-    final summary = await widget.repositories.comparisons.monthSummary();
-    if (mounted) setState(() => _summary = summary);
   }
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator.adaptive(
       onRefresh: _refresh,
+      edgeOffset: 86,
+      displacement: 110,
+      color: AppColors.brand,
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
@@ -70,23 +68,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.fromLTRB(22, 86, 22, 112),
               sliver: SliverList.list(
                 children: [
-                  Text(
-                    'Comparison History',
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
-                  ),
-                  SizedBox(height: 7),
-                  Text(
-                    'Your previous price checks, all in one place.',
-                    style: TextStyle(
-                      color: secondaryTextColor(context),
-                      fontSize: 13,
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  _HistorySummary(summary: _summary),
-                  SizedBox(height: 24),
-                  SectionLabel('Recent Comparisons'),
-                  SizedBox(height: 11),
                   if (_loading)
                     SoftCard(
                       child: Text(
@@ -99,15 +80,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     )
                   else if (_comparisons.isEmpty)
-                    SoftCard(
-                      child: Text(
-                        'No comparisons yet. Run one from the home screen to see it here.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: secondaryTextColor(context),
-                          fontSize: 13,
-                        ),
-                      ),
+                    const IllustratedEmptyState(
+                      icon: CupertinoIcons.clock,
+                      title: 'Your history is waiting',
+                      message: 'Run a comparison from Home and your price checks will appear here.',
+                      accent: AppColors.brand,
                     )
                   else
                     ..._comparisons.map(
@@ -129,7 +106,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               color: Colors.white,
                             ),
                           ),
-                          child: _HistoryItem(comparison: comparison),
+                          child: _HistoryItem(
+                            comparison: comparison,
+                            onTap: () => _showDetails(comparison),
+                          ),
                         ),
                       ),
                     ),
@@ -141,70 +121,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
   }
-}
 
-class _HistorySummary extends StatelessWidget {
-  const _HistorySummary({required this.summary});
-
-  final ({double savings, int count}) summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: dark ? AppColors.brandDeep : AppColors.brand,
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            CupertinoIcons.chart_bar_alt_fill,
-            color: AppColors.white,
-            size: 25,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${formatZmw(summary.savings)} saved',
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'From ${summary.count} ${summary.count == 1 ? 'comparison' : 'comparisons'} this month',
-                  style: const TextStyle(
-                    color: AppColors.onBrandMuted,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+  void _showDetails(ComparisonRecord comparison) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ComparisonDetailsSheet(comparison: comparison),
     );
   }
 }
 
 class _HistoryItem extends StatelessWidget {
-  const _HistoryItem({required this.comparison});
+  const _HistoryItem({required this.comparison, required this.onTap});
 
   final ComparisonRecord comparison;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final storeCount = comparison.items.map((i) => i.storeName).toSet().length;
     return SoftCard(
-      child: Row(
-        children: [
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
           const BrandIconTile(icon: CupertinoIcons.clock_fill, size: 43),
           const SizedBox(width: 12),
           Expanded(
@@ -238,8 +184,111 @@ class _HistoryItem extends StatelessWidget {
             formatZmw(comparison.totalLowest),
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
+}
+
+class _ComparisonDetailsSheet extends StatelessWidget {
+  const _ComparisonDetailsSheet({required this.comparison});
+
+  final ComparisonRecord comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final stores = comparison.items.map((item) => item.storeName).whereType<String>().toSet().toList();
+    return DraggableScrollableSheet(
+      initialChildSize: .72,
+      minChildSize: .45,
+      maxChildSize: .94,
+      expand: false,
+      builder: (context, controller) => Material(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+          children: [
+            Center(child: Container(width: 38, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(10)))),
+            const SizedBox(height: 20),
+            Row(children: [
+              const Expanded(child: Text('Comparison details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))),
+              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(CupertinoIcons.xmark, size: 16), style: IconButton.styleFrom(backgroundColor: AppColors.soft)),
+            ]),
+            Text(comparison.reference, style: const TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(formatRelativeDateTime(comparison.createdAt), style: TextStyle(color: secondaryTextColor(context), fontSize: 11)),
+            const SizedBox(height: 20),
+            _SummaryPanel(comparison: comparison),
+            const SizedBox(height: 22),
+            const SectionLabel('Items compared'),
+            const SizedBox(height: 10),
+            if (comparison.items.isEmpty)
+              const IllustratedEmptyState(
+                icon: CupertinoIcons.doc_text_search,
+                title: 'No priced items',
+                message: 'This comparison did not find prices for the selected products.',
+                compact: true,
+                accent: AppColors.muted,
+              )
+            else
+              ...comparison.items.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SoftCard(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(children: [
+                        const BrandIconTile(icon: CupertinoIcons.cart_fill, size: 36),
+                        const SizedBox(width: 10),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(item.productName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 3),
+                          Text('${item.storeName ?? 'Store unavailable'} · Qty ${item.quantity}', style: const TextStyle(color: AppColors.muted, fontSize: 10)),
+                        ])),
+                        Text(formatZmw(item.lineTotal), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                      ]),
+                    ),
+                  )),
+            const SizedBox(height: 14),
+            Text(stores.isEmpty ? 'Stores: —' : 'Stores: ${stores.join(', ')}', style: const TextStyle(color: AppColors.muted, fontSize: 10)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryPanel extends StatelessWidget {
+  const _SummaryPanel({required this.comparison});
+
+  final ComparisonRecord comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      color: Theme.of(context).brightness == Brightness.dark ? AppColors.brandDeep : AppColors.brand,
+      child: Column(children: [
+        Row(children: [const Expanded(child: Text('Lowest basket total', style: TextStyle(color: AppColors.white, fontSize: 11))), Text(formatZmw(comparison.totalLowest), style: const TextStyle(color: AppColors.white, fontSize: 20, fontWeight: FontWeight.w900))]),
+        const SizedBox(height: 12),
+        _SummaryLine(label: 'Cheapest single store', value: formatZmw(comparison.totalCheapestStore)),
+        _SummaryLine(label: 'Savings', value: formatZmw(comparison.totalSavings)),
+        if (comparison.budget != null) _SummaryLine(label: 'Budget', value: formatZmw(comparison.budget!)),
+      ]),
+    );
+  }
+}
+
+class _SummaryLine extends StatelessWidget {
+  const _SummaryLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 5),
+        child: Row(children: [Expanded(child: Text(label, style: const TextStyle(color: AppColors.onBrandMuted, fontSize: 10))), Text(value, style: const TextStyle(color: AppColors.white, fontSize: 12, fontWeight: FontWeight.w800))]),
+      );
 }

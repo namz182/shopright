@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/ui_components.dart';
 import '../../data/local/models.dart';
 import '../../data/repositories/repositories.dart';
+import '../../data/repositories/data_sources.dart';
 
 class ShopsScreen extends StatefulWidget {
   const ShopsScreen({required this.repositories, super.key});
@@ -18,6 +19,8 @@ class ShopsScreen extends StatefulWidget {
 class _ShopsScreenState extends State<ShopsScreen> {
   List<StoreInfo> _stores = const [];
   bool _loading = true;
+  String? _error;
+  UserLocation _location = const UserLocation();
 
   @override
   void initState() {
@@ -26,24 +29,31 @@ class _ShopsScreenState extends State<ShopsScreen> {
   }
 
   Future<void> _load() async {
+    UserLocation? location;
     try {
-      final stores = await widget.repositories.catalog.stores();
+      location = await widget.repositories.settings.location();
+      debugPrint(
+        '[ShopRight Shops] selected location: ${location.label} '
+        'province_id=${location.provinceId} district_id=${location.districtId}',
+      );
+      if (mounted) setState(() => _location = location!);
+      final stores = await widget.repositories.catalog.storesForLocation(
+        provinceId: location.provinceId,
+        districtId: location.districtId,
+      );
       if (!mounted) return;
       setState(() {
         _stores = stores;
+        _error = null;
         _loading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (error) {
+      debugPrint('[ShopRight Shops] store load failed: $error');
+      if (mounted) setState(() { _loading = false; _error = 'Unable to load stores. Check that the backend is running and reachable.'; });
     }
   }
 
   Future<void> _refresh() async {
-    try {
-      await widget.repositories.catalog.refreshFromApi();
-    } catch (_) {
-      // Offline — keep cached stores.
-    }
     await _load();
   }
 
@@ -51,6 +61,9 @@ class _ShopsScreenState extends State<ShopsScreen> {
   Widget build(BuildContext context) {
     return RefreshIndicator.adaptive(
       onRefresh: _refresh,
+      edgeOffset: 86,
+      displacement: 110,
+      color: AppColors.brand,
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
@@ -62,21 +75,6 @@ class _ShopsScreenState extends State<ShopsScreen> {
               padding: const EdgeInsets.fromLTRB(22, 86, 22, 112),
               sliver: SliverList.list(
                 children: [
-                  Text(
-                    'Nearby Shops',
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
-                  ),
-                  SizedBox(height: 7),
-                  Text(
-                    'Compare prices from stores around Ndola.',
-                    style: TextStyle(
-                      color: secondaryTextColor(context),
-                      fontSize: 13,
-                    ),
-                  ),
-                  SizedBox(height: 22),
-                  const _LocationCard(),
-                  SizedBox(height: 24),
                   SectionLabel('Available Stores'),
                   SizedBox(height: 11),
                   if (_loading)
@@ -90,15 +88,34 @@ class _ShopsScreenState extends State<ShopsScreen> {
                         ),
                       ),
                     )
+                  else if (_error != null)
+                    IllustratedEmptyState(
+                      icon: CupertinoIcons.wifi_exclamationmark,
+                      title: 'Stores are unavailable',
+                      message: _error!,
+                      accent: const Color(0xFFE5484D),
+                      actionLabel: 'Retry',
+                      onAction: () => _load(),
+                    )
+                  else if (_stores.isEmpty)
+                    IllustratedEmptyState(
+                      icon: _location.isSelected
+                          ? CupertinoIcons.building_2_fill
+                          : CupertinoIcons.location,
+                      title: _location.isSelected
+                          ? 'No stores in ${_location.districtName}'
+                          : 'Choose your shopping area',
+                      message: _location.isSelected
+                          ? 'We could not find stores in ${_location.label} yet. Try refreshing later.'
+                          : 'Select a province and district in Settings to see nearby stores.',
+                      accent: AppColors.brand,
+                    )
                   else
                     ..._stores.map(
                       (store) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _ShopCard(
                           name: store.name,
-                          distance: store.distanceKm != null
-                              ? '${_trimDistance(store.distanceKm!)} km away'
-                              : null,
                           detail: store.location,
                         ),
                       ),
@@ -113,57 +130,13 @@ class _ShopsScreenState extends State<ShopsScreen> {
   }
 }
 
-String _trimDistance(double km) {
-  final text = km.toStringAsFixed(1);
-  return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
-}
-
-class _LocationCard extends StatelessWidget {
-  const _LocationCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return SoftCard(
-      child: Row(
-        children: [
-          Icon(CupertinoIcons.location_solid, size: 20),
-          SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Ndola, Copperbelt',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  'Your current comparison area',
-                  style: TextStyle(color: AppColors.muted, fontSize: 10),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            CupertinoIcons.chevron_down,
-            size: 15,
-            color: secondaryTextColor(context),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ShopCard extends StatelessWidget {
   const _ShopCard({
     required this.name,
     required this.detail,
-    this.distance,
   });
 
   final String name;
-  final String? distance;
   final String? detail;
 
   @override
@@ -184,16 +157,6 @@ class _ShopCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                if (distance != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    distance!,
-                    style: TextStyle(
-                      color: secondaryTextColor(context),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
                 if (detail != null && detail!.trim().isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(

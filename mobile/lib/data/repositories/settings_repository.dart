@@ -10,6 +10,10 @@ class SettingsRepository implements SettingsDataSource {
   final AppDatabase _db;
 
   static const _budgetKey = 'budget';
+  static const _provinceIdKey = 'province_id';
+  static const _provinceNameKey = 'province_name';
+  static const _districtIdKey = 'district_id';
+  static const _districtNameKey = 'district_name';
 
   @override
   Future<double?> budget() async {
@@ -58,6 +62,21 @@ class SettingsRepository implements SettingsDataSource {
           'category': item.category,
           'quantity': item.quantity,
         });
+      }
+    });
+  }
+
+  Future<UserLocation> location() async {
+    Future<String?> read(String key) async { final rows = await _db.raw.query('settings', where: 'key = ?', whereArgs: [key], limit: 1); return rows.isEmpty ? null : rows.first['value'] as String?; }
+    final provinceId = int.tryParse(await read(_provinceIdKey) ?? '');
+    final districtId = int.tryParse(await read(_districtIdKey) ?? '');
+    return UserLocation(provinceId: provinceId, provinceName: await read(_provinceNameKey), districtId: districtId, districtName: await read(_districtNameKey));
+  }
+
+  Future<void> setLocation(UserLocation location) async {
+    await _db.raw.transaction((txn) async {
+      for (final entry in {'$_provinceIdKey': '${location.provinceId ?? ''}', '$_provinceNameKey': location.provinceName ?? '', '$_districtIdKey': '${location.districtId ?? ''}', '$_districtNameKey': location.districtName ?? ''}.entries) {
+        await txn.insert('settings', {'key': entry.key, 'value': entry.value}, conflictAlgorithm: ConflictAlgorithm.replace);
       }
     });
   }
