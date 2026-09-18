@@ -83,6 +83,145 @@ class SoftCard extends StatelessWidget {
   }
 }
 
+class IllustratedEmptyState extends StatelessWidget {
+  const IllustratedEmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.accent = AppColors.brand,
+    this.compact = false,
+    this.actionLabel,
+    this.onAction,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Color accent;
+  final bool compact;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = compact
+        ? Row(
+            children: [
+              _EmptyStateIllustration(icon: icon, accent: accent, compact: true),
+              const SizedBox(width: 13),
+              Expanded(child: _copy(context)),
+            ],
+          )
+        : Column(
+            children: [
+              _EmptyStateIllustration(icon: icon, accent: accent),
+              const SizedBox(height: 12),
+              _copy(context),
+            ],
+          );
+
+    return SoftCard(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 14 : 20,
+        vertical: compact ? 13 : 22,
+      ),
+      child: content,
+    );
+  }
+
+  Widget _copy(BuildContext context) {
+    return Column(
+      crossAxisAlignment: compact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        Text(
+          title,
+          textAlign: compact ? TextAlign.left : TextAlign.center,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          message,
+          textAlign: compact ? TextAlign.left : TextAlign.center,
+          style: TextStyle(
+            color: secondaryTextColor(context),
+            fontSize: 11,
+            height: 1.4,
+          ),
+        ),
+        if (actionLabel != null && onAction != null) ...[
+          const SizedBox(height: 13),
+          TextButton.icon(
+            onPressed: onAction,
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+            label: Text(actionLabel!),
+            style: TextButton.styleFrom(
+              foregroundColor: accent,
+              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _EmptyStateIllustration extends StatelessWidget {
+  const _EmptyStateIllustration({
+    required this.icon,
+    required this.accent,
+    this.compact = false,
+  });
+
+  final IconData icon;
+  final Color accent;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = compact ? 52.0 : 84.0;
+    final iconSize = compact ? 21.0 : 31.0;
+    return SizedBox(
+      width: size + (compact ? 0 : 18),
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            left: compact ? 0 : 5,
+            bottom: compact ? 2 : 0,
+            child: Container(
+              width: compact ? 40 : 67,
+              height: compact ? 40 : 67,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: .10),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Container(
+            width: compact ? 38 : 60,
+            height: compact ? 38 : 60,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(compact ? 13 : 20),
+              border: Border.all(color: accent.withValues(alpha: .22)),
+            ),
+            child: Icon(icon, color: accent, size: iconSize),
+          ),
+          if (!compact)
+            Positioned(
+              right: 1,
+              top: 3,
+              child: Icon(Icons.auto_awesome_rounded, color: accent.withValues(alpha: .65), size: 17),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     required this.label,

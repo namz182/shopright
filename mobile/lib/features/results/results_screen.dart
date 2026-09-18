@@ -162,43 +162,46 @@ class _ResultsBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ComparisonIdentity(reference: result.reference),
+        const SizedBox(height: 16),
+        _ComparisonChecks(result: result),
         if (result.unavailableProducts.isNotEmpty) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _UnavailableProductsCard(products: result.unavailableProducts),
         ],
-        const SizedBox(height: 18),
-        _LowestTotalCard(total: result.totalLowest),
         const SizedBox(height: 24),
         SectionLabel(
-          'Lowest Price Per Item',
+          'Best price for each item',
           trailing: const Text(
-            'Tap an item for store prices',
+            'Tap to compare',
             style: TextStyle(color: AppColors.muted, fontSize: 10),
           ),
         ),
         const SizedBox(height: 11),
-        for (final item in result.items) ...[
-          _LowestPriceCard(
-            item: itemLabel(item.productName, item.quantity),
-            store: item.storeName,
-            price: formatZmw(item.unitPrice),
-            onTap: () => onSelectItem(item),
-          ),
-          const SizedBox(height: 9),
-        ],
+        if (result.items.isEmpty)
+          const IllustratedEmptyState(
+            icon: CupertinoIcons.cart_badge_minus,
+            title: 'No item prices found',
+            message: 'There are no available prices to display for this comparison.',
+            compact: true,
+            accent: AppColors.muted,
+          )
+        else
+          for (final item in result.items) ...[
+            _LowestPriceCard(
+              item: itemLabel(item.productName, item.quantity),
+              store: item.storeName,
+              price: formatZmw(item.unitPrice),
+              onTap: () => onSelectItem(item),
+            ),
+            const SizedBox(height: 9),
+          ],
         if (result.items.isNotEmpty) const SizedBox(height: 15),
-        const SectionLabel('Total Basket By Shop'),
+        const SectionLabel('One-store basket totals'),
         const SizedBox(height: 11),
         _ShopTotals(
           storeTotals: result.storeTotals,
           totalLowest: result.totalLowest,
         ),
-        if (result.budget != null) ...[
-          const SizedBox(height: 24),
-          SectionLabel('Budget Check'),
-          const SizedBox(height: 11),
-          _BudgetCheck(total: result.totalLowest, budget: result.budget!),
-        ],
       ],
     );
   }
@@ -247,6 +250,73 @@ class _UnavailableProductsCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ComparisonChecks extends StatelessWidget {
+  const _ComparisonChecks({required this.result});
+
+  final ComparisonResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 100,
+      child: Row(
+        children: [
+          Expanded(child: _LowestCheck(total: result.totalLowest, items: result.itemsCount)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: result.budget == null
+                ? const _NoBudgetCheck()
+                : _BudgetCheck(total: result.totalLowest, budget: result.budget!),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LowestCheck extends StatelessWidget {
+  const _LowestCheck({required this.total, required this.items});
+
+  final double total;
+  final int items;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: dark ? AppColors.brandDeep : AppColors.brand,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Lowest price', style: TextStyle(color: AppColors.onBrandMuted, fontSize: 10, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(formatZmw(total), style: const TextStyle(color: AppColors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text('$items ${items == 1 ? 'item' : 'items'} priced', style: const TextStyle(color: AppColors.onBrandMuted, fontSize: 9)),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoBudgetCheck extends StatelessWidget {
+  const _NoBudgetCheck();
+
+  @override
+  Widget build(BuildContext context) => const IllustratedEmptyState(
+        icon: CupertinoIcons.money_dollar_circle,
+        title: 'No budget set',
+        message: 'Add one when you want a budget check.',
+        compact: true,
+        accent: AppColors.muted,
+      );
 }
 
 class _ComparisonIdentity extends StatelessWidget {
@@ -298,58 +368,6 @@ class _ComparisonIdentity extends StatelessWidget {
   }
 }
 
-class _LowestTotalCard extends StatelessWidget {
-  const _LowestTotalCard({required this.total});
-
-  final double total;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: dark ? AppColors.brandDeep : AppColors.brand,
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            CupertinoIcons.check_mark_circled_solid,
-            color: AppColors.white,
-            size: 26,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Total at lowest prices',
-                  style: TextStyle(
-                    color: AppColors.onBrandMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  formatZmw(total),
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _LowestPriceCard extends StatelessWidget {
   const _LowestPriceCard({
     required this.item,
@@ -371,6 +389,8 @@ class _LowestPriceCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
+            const BrandIconTile(icon: CupertinoIcons.cart_fill, size: 36),
+            const SizedBox(width: 11),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,11 +424,7 @@ class _LowestPriceCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Icon(
-                  CupertinoIcons.chevron_up_chevron_down,
-                  size: 13,
-                  color: AppColors.muted,
-                ),
+                const Icon(CupertinoIcons.chevron_right, size: 13, color: AppColors.muted),
               ],
             ),
           ],
@@ -426,6 +442,15 @@ class _ShopTotals extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (storeTotals.isEmpty) {
+      return const IllustratedEmptyState(
+        icon: CupertinoIcons.bag_badge_minus,
+        title: 'No complete basket found',
+        message: 'No store has every item in this comparison available right now.',
+        compact: true,
+        accent: AppColors.muted,
+      );
+    }
     return SoftCard(
       child: Column(
         children: [
@@ -511,38 +536,22 @@ class _BudgetCheck extends StatelessWidget {
   Widget build(BuildContext context) {
     final under = total <= budget;
     final remaining = budget - total;
+    final accent = under ? AppColors.brand : const Color(0xFFE5484D);
     return SoftCard(
-      child: Row(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            under
-                ? CupertinoIcons.check_mark_circled
-                : CupertinoIcons.exclamationmark_triangle,
-            size: 22,
-            color: under ? AppColors.brand : const Color(0xFFE5484D),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  under ? 'Within your budget' : 'Over your budget',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  under
-                      ? '${formatZmw(remaining)} left'
-                      : '${formatZmw(remaining.abs())} over',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 10),
-                ),
-              ],
-            ),
-          ),
+          Row(children: [
+            Icon(under ? CupertinoIcons.check_mark_circled : CupertinoIcons.exclamationmark_triangle, size: 17, color: accent),
+            const SizedBox(width: 6),
+            Expanded(child: Text(under ? 'Within budget' : 'Over budget', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800))),
+          ]),
+          const SizedBox(height: 8),
+          Text(under ? '${formatZmw(remaining)} left' : '${formatZmw(remaining.abs())} over', style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text('Budget ${formatZmw(budget)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.muted, fontSize: 9)),
         ],
       ),
     );

@@ -146,12 +146,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (_catalogError != null) ...[
                   const SizedBox(height: 10),
-                  SoftCard(
-                    child: Text(
-                      _catalogError!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: secondaryTextColor(context), fontSize: 12),
-                    ),
+                  IllustratedEmptyState(
+                    icon: CupertinoIcons.wifi_exclamationmark,
+                    title: 'Products are unavailable',
+                    message: _catalogError!,
+                    accent: const Color(0xFFE5484D),
+                    compact: true,
+                    actionLabel: 'Retry',
+                    onAction: () => _load(),
                   ),
                 ],
                 const SizedBox(height: 23),
@@ -202,15 +204,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   )
                 else if (_items.isEmpty)
-                  SoftCard(
-                    child: Text(
-                      'Your list is empty. Add an essential above to get started.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: secondaryTextColor(context),
-                        fontSize: 13,
-                      ),
-                    ),
+                  const IllustratedEmptyState(
+                    icon: CupertinoIcons.cart,
+                    title: 'Build your shopping list',
+                    message: 'Add products above, then compare prices across stores in your area.',
+                    accent: AppColors.brand,
                   )
                 else
                   ..._items.map(
@@ -553,15 +551,12 @@ class _SearchSheetState extends State<_SearchSheet> {
                 ),
                 if (_query.trim().isNotEmpty && _results.isEmpty) ...[
                   const SizedBox(height: 10),
-                  SoftCard(
-                    child: Text(
-                      'No matches for "${_query.trim()}".',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: secondaryTextColor(context),
-                        fontSize: 13,
-                      ),
-                    ),
+                  IllustratedEmptyState(
+                    icon: CupertinoIcons.search,
+                    title: 'No products found',
+                    message: 'Try a shorter name or search for another grocery item.',
+                    compact: true,
+                    accent: AppColors.muted,
                   ),
                 ],
               ],

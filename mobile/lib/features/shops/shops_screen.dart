@@ -96,16 +96,26 @@ class _ShopsScreenState extends State<ShopsScreen> {
                       ),
                     )
                   else if (_error != null)
-                    SoftCard(child: Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: secondaryTextColor(context), fontSize: 12)))
+                    IllustratedEmptyState(
+                      icon: CupertinoIcons.wifi_exclamationmark,
+                      title: 'Stores are unavailable',
+                      message: _error!,
+                      accent: const Color(0xFFE5484D),
+                      actionLabel: 'Retry',
+                      onAction: () => _load(),
+                    )
                   else if (_stores.isEmpty)
-                    SoftCard(
-                      child: Text(
-                        _location.isSelected
-                            ? 'No stores are available in this district yet.'
-                            : 'Choose a province and district in Settings to see local stores.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: secondaryTextColor(context), fontSize: 13),
-                      ),
+                    IllustratedEmptyState(
+                      icon: _location.isSelected
+                          ? CupertinoIcons.building_2_fill
+                          : CupertinoIcons.location,
+                      title: _location.isSelected
+                          ? 'No stores here yet'
+                          : 'Choose your shopping area',
+                      message: _location.isSelected
+                          ? 'We could not find stores in this district yet. Try refreshing later.'
+                          : 'Select a province and district in Settings to see nearby stores.',
+                      accent: AppColors.brand,
                     )
                   else
                     ..._stores.map(

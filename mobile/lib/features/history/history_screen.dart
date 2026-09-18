@@ -99,15 +99,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     )
                   else if (_comparisons.isEmpty)
-                    SoftCard(
-                      child: Text(
-                        'No comparisons yet. Run one from the home screen to see it here.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: secondaryTextColor(context),
-                          fontSize: 13,
-                        ),
-                      ),
+                    const IllustratedEmptyState(
+                      icon: CupertinoIcons.clock,
+                      title: 'Your history is waiting',
+                      message: 'Run a comparison from Home and your price checks will appear here.',
+                      accent: AppColors.brand,
                     )
                   else
                     ..._comparisons.map(
@@ -301,7 +297,13 @@ class _ComparisonDetailsSheet extends StatelessWidget {
             const SectionLabel('Items compared'),
             const SizedBox(height: 10),
             if (comparison.items.isEmpty)
-              const SoftCard(child: Text('No priced items were available for this comparison.'))
+              const IllustratedEmptyState(
+                icon: CupertinoIcons.doc_text_search,
+                title: 'No priced items',
+                message: 'This comparison did not find prices for the selected products.',
+                compact: true,
+                accent: AppColors.muted,
+              )
             else
               ...comparison.items.map((item) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
