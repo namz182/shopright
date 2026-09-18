@@ -99,9 +99,10 @@ class CatalogSeeder extends Seeder
     {
         $rows = [
             ['name' => 'Shoprite Ndola', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
-            ['name' => 'Local Market (Chifubu)', 'location' => 'Chifubu, Ndola', 'province' => 'Copperbelt', 'district' => 'Ndola'],
-            ['name' => 'Pick n Pay Copperbelt', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
-            ['name' => 'Melissa Supermarket', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
+            ['name' => 'Pick n Pay Ndola', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
+            ['name' => 'Spar Ndola', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
+            ['name' => 'Choppies Ndola', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
+            ['name' => 'Kwasinya Supermarket', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
         ];
 
         $stores = [];
@@ -129,9 +130,9 @@ class CatalogSeeder extends Seeder
     private function prices(array $products, array $stores): void
     {
         $matrix = [
-            'Breakfast Meal 25kg' => ['Shoprite Ndola' => 670.00, 'Local Market (Chifubu)' => 690.00, 'Pick n Pay Copperbelt' => 720.00, 'Melissa Supermarket' => 710.00],
-            'Cooking Oil 2.5L' => ['Shoprite Ndola' => 142.00, 'Local Market (Chifubu)' => 135.00, 'Pick n Pay Copperbelt' => 149.00, 'Melissa Supermarket' => 145.00],
-            'White Sugar 2kg' => ['Shoprite Ndola' => 59.00, 'Local Market (Chifubu)' => 60.00, 'Pick n Pay Copperbelt' => 55.00, 'Melissa Supermarket' => 63.00],
+            'Breakfast Meal 25kg' => ['Shoprite Ndola' => 670.00, 'Pick n Pay Ndola' => 720.00, 'Spar Ndola' => 710.00, 'Choppies Ndola' => 690.00, 'Kwasinya Supermarket' => 620.00],
+            'Cooking Oil 2.5L' => ['Shoprite Ndola' => 142.00, 'Pick n Pay Ndola' => 149.00, 'Spar Ndola' => 145.00, 'Choppies Ndola' => 135.00, 'Kwasinya Supermarket' => 125.00],
+            'White Sugar 2kg' => ['Shoprite Ndola' => 59.00, 'Pick n Pay Ndola' => 55.00, 'Spar Ndola' => 63.00, 'Choppies Ndola' => 60.00, 'Kwasinya Supermarket' => 50.00],
         ];
 
         foreach ($matrix as $productName => $storePrices) {

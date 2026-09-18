@@ -19,6 +19,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ProvinceDistrictSeeder::class,
             CatalogSeeder::class,
+            ZambianProductSeeder::class,
+            LargeCatalogSeeder::class,
         ]);
 
         User::updateOrCreate(
