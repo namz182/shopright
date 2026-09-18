@@ -29,8 +29,14 @@ class _ShopsScreenState extends State<ShopsScreen> {
   }
 
   Future<void> _load() async {
+    UserLocation? location;
     try {
-      final location = await widget.repositories.settings.location();
+      location = await widget.repositories.settings.location();
+      debugPrint(
+        '[ShopRight Shops] selected location: ${location.label} '
+        'province_id=${location.provinceId} district_id=${location.districtId}',
+      );
+      if (mounted) setState(() => _location = location!);
       final stores = await widget.repositories.catalog.storesForLocation(
         provinceId: location.provinceId,
         districtId: location.districtId,
@@ -38,7 +44,6 @@ class _ShopsScreenState extends State<ShopsScreen> {
       if (!mounted) return;
       setState(() {
         _stores = stores;
-        _location = location;
         _error = null;
         _loading = false;
       });
@@ -56,6 +61,9 @@ class _ShopsScreenState extends State<ShopsScreen> {
   Widget build(BuildContext context) {
     return RefreshIndicator.adaptive(
       onRefresh: _refresh,
+      edgeOffset: 86,
+      displacement: 110,
+      color: AppColors.brand,
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
@@ -67,21 +75,6 @@ class _ShopsScreenState extends State<ShopsScreen> {
               padding: const EdgeInsets.fromLTRB(22, 86, 22, 112),
               sliver: SliverList.list(
                 children: [
-                  Text(
-                    'Nearby Shops',
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
-                  ),
-                  SizedBox(height: 7),
-                  Text(
-                    'Compare prices from stores in your selected location.',
-                    style: TextStyle(
-                      color: secondaryTextColor(context),
-                      fontSize: 13,
-                    ),
-                  ),
-                  SizedBox(height: 22),
-                  _LocationCard(location: _location),
-                  SizedBox(height: 24),
                   SectionLabel('Available Stores'),
                   SizedBox(height: 11),
                   if (_loading)
@@ -110,10 +103,10 @@ class _ShopsScreenState extends State<ShopsScreen> {
                           ? CupertinoIcons.building_2_fill
                           : CupertinoIcons.location,
                       title: _location.isSelected
-                          ? 'No stores here yet'
+                          ? 'No stores in ${_location.districtName}'
                           : 'Choose your shopping area',
                       message: _location.isSelected
-                          ? 'We could not find stores in this district yet. Try refreshing later.'
+                          ? 'We could not find stores in ${_location.label} yet. Try refreshing later.'
                           : 'Select a province and district in Settings to see nearby stores.',
                       accent: AppColors.brand,
                     )
@@ -130,45 +123,6 @@ class _ShopsScreenState extends State<ShopsScreen> {
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LocationCard extends StatelessWidget {
-  const _LocationCard({required this.location});
-
-  final UserLocation location;
-
-  @override
-  Widget build(BuildContext context) {
-    return SoftCard(
-      child: Row(
-        children: [
-          Icon(CupertinoIcons.location_solid, size: 20),
-          SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  location.label,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  'Your current comparison area',
-                  style: TextStyle(color: AppColors.muted, fontSize: 10),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            CupertinoIcons.chevron_down,
-            size: 15,
-            color: secondaryTextColor(context),
           ),
         ],
       ),

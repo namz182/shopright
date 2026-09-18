@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/app_top_bar.dart';
+import '../../data/local/models.dart';
 import '../../data/repositories/repositories.dart';
+import '../../data/repositories/data_sources.dart';
 import '../history/history_screen.dart';
 import '../home/home_screen.dart';
 import '../settings/settings_screen.dart';
@@ -27,11 +29,29 @@ class RootShell extends StatefulWidget {
 class _RootShellState extends State<RootShell> {
   AppTab _tab = AppTab.home;
   int _locationRevision = 0;
+  UserLocation _location = const UserLocation();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.repositories.settings.location().then((location) {
+      if (mounted) setState(() => _location = location);
+    });
+  }
 
   void _switchTab(AppTab tab) {
     Navigator.of(context).popUntil((route) => route.isFirst);
     setState(() => _tab = tab);
   }
+
+  String get _pageTitle => switch (_tab) {
+        AppTab.home => 'Shop Right',
+        AppTab.history => 'Comparison History',
+        AppTab.shops => 'Nearby Shops',
+        AppTab.settings => 'Settings',
+      };
+
+  String? get _pageSubtitle => _tab == AppTab.shops ? _location.label : null;
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +77,14 @@ class _RootShellState extends State<RootShell> {
                 repositories: widget.repositories,
                 isDarkMode: widget.isDarkMode,
                 onThemeChanged: widget.onThemeChanged,
-                onLocationChanged: (_) => setState(() => _locationRevision++),
+                onLocationChanged: (location) => setState(() {
+                  _location = location;
+                  _locationRevision++;
+                }),
               ),
             ],
           ),
-          const AppStickyTopBar(),
+          AppStickyTopBar(title: _pageTitle, subtitle: _pageSubtitle),
           Positioned(
             left: 0,
             right: 0,

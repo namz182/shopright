@@ -186,6 +186,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: RefreshIndicator.adaptive(
             onRefresh: _refresh,
+            edgeOffset: 86,
+            displacement: 110,
+            color: AppColors.brand,
             child: ListView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),

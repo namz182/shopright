@@ -27,6 +27,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  static const _appVersion = '1.0.0';
+
   late bool _isDarkMode = widget.isDarkMode;
   UserLocation _location = const UserLocation();
   bool _locationLoading = false;
@@ -57,6 +59,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return RefreshIndicator.adaptive(
       onRefresh: _refreshSettings,
+      edgeOffset: 86,
+      displacement: 110,
+      color: AppColors.brand,
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
@@ -68,11 +73,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.fromLTRB(22, 86, 22, 112),
               sliver: SliverList.list(
                 children: [
-                  const Text(
-                    'Settings',
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 7),
                   Text(
                     'Personalize your Shop Right experience.',
                     style: TextStyle(
@@ -123,12 +123,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: _locationLoading ? null : _chooseLocation,
                         loading: _locationLoading,
                       ),
-                      _SettingsAction(
-                        icon: CupertinoIcons.bell_fill,
-                        label: 'Price alerts',
-                        value: 'On',
-                        onTap: () => _showMessage(context, 'Price alerts'),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -139,18 +133,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsAction(
                         icon: CupertinoIcons.question_circle_fill,
                         label: 'Help & feedback',
-                        onTap: () => _showMessage(context, 'Help & feedback'),
+                        onTap: () => _showInfoSheet(context, _SettingsInfoType.help),
                       ),
                       _SettingsAction(
                         icon: CupertinoIcons.doc_text_fill,
                         label: 'Privacy policy',
-                        onTap: () => _showMessage(context, 'Privacy policy'),
+                        onTap: () => _showInfoSheet(context, _SettingsInfoType.privacy),
                       ),
                       _SettingsAction(
                         icon: CupertinoIcons.info_circle_fill,
                         label: 'About Shop Right',
-                        value: 'Version 1.0.0',
-                        onTap: () => _showMessage(context, 'About Shop Right'),
+                        value: 'Version $_appVersion',
+                        onTap: () => _showInfoSheet(context, _SettingsInfoType.about),
                       ),
                     ],
                   ),
@@ -160,6 +154,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showInfoSheet(BuildContext context, _SettingsInfoType type) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SettingsInfoSheet(type: type, version: _appVersion),
     );
   }
 
@@ -203,6 +207,183 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _refreshSettings() async {
     final location = await widget.repositories.settings.location();
     if (mounted) setState(() => _location = location);
+  }
+}
+
+enum _SettingsInfoType { help, privacy, about }
+
+class _SettingsInfoSheet extends StatelessWidget {
+  const _SettingsInfoSheet({required this.type, required this.version});
+
+  final _SettingsInfoType type;
+  final String version;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = switch (type) {
+      _SettingsInfoType.help => 'Help & feedback',
+      _SettingsInfoType.privacy => 'Privacy policy',
+      _SettingsInfoType.about => 'About Shop Right',
+    };
+    final icon = switch (type) {
+      _SettingsInfoType.help => CupertinoIcons.question_circle_fill,
+      _SettingsInfoType.privacy => CupertinoIcons.lock_shield_fill,
+      _SettingsInfoType.about => CupertinoIcons.info_circle_fill,
+    };
+
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: SafeArea(
+        top: false,
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+          children: [
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Icon(icon, color: AppColors.brand, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(CupertinoIcons.xmark, size: 16),
+                  style: IconButton.styleFrom(backgroundColor: AppColors.soft),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (type == _SettingsInfoType.help) ...[
+              const Text(
+                'Compare everyday prices in a few simple steps.',
+                style: TextStyle(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              const _InfoPoint(
+                icon: CupertinoIcons.cart_fill,
+                title: 'Build your list',
+                message: 'Search for products and add what you plan to buy.',
+              ),
+              const _InfoPoint(
+                icon: CupertinoIcons.location_solid,
+                title: 'Choose your area',
+                message: 'Set a province and district so stores match your location.',
+              ),
+              const _InfoPoint(
+                icon: CupertinoIcons.chart_bar_fill,
+                title: 'Compare prices',
+                message: 'Tap Compare to see the lowest item prices and store totals.',
+              ),
+              const SizedBox(height: 10),
+              SoftCard(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.nightCard
+                    : AppColors.soft,
+                child: const Text(
+                  'Tip: pull down on any page to refresh the latest products, stores, or saved history.',
+                  style: TextStyle(fontSize: 11, height: 1.45),
+                ),
+              ),
+            ] else if (type == _SettingsInfoType.privacy) ...[
+              const Text(
+                'Shop Right uses your selected province and district to show stores and prices for that area.',
+                style: TextStyle(fontSize: 13, height: 1.45),
+              ),
+              const SizedBox(height: 14),
+              const _InfoPoint(
+                icon: CupertinoIcons.location,
+                title: 'No precise GPS',
+                message: 'The app uses the area you choose in Settings rather than tracking your device location.',
+              ),
+              const _InfoPoint(
+                icon: CupertinoIcons.lock_fill,
+                title: 'Your saved data',
+                message: 'Shopping lists, settings, and comparison history stay on this device.',
+              ),
+              const _InfoPoint(
+                icon: CupertinoIcons.cloud_fill,
+                title: 'Catalog requests',
+                message: 'Products, stores, and prices are requested from the Shop Right backend when needed.',
+              ),
+            ] else ...[
+              Center(
+                child: Column(
+                  children: [
+                    const BrandIconTile(icon: CupertinoIcons.cart_fill, size: 58),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Shop Right',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Version $version',
+                      style: const TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              const SoftCard(
+                child: Text(
+                  'Shop Right helps you plan a smarter grocery trip by comparing product prices across stores in your selected district.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, height: 1.5),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoPoint extends StatelessWidget {
+  const _InfoPoint({required this.icon, required this.title, required this.message});
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.brand, size: 19),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 3),
+                Text(message, style: TextStyle(color: secondaryTextColor(context), fontSize: 11, height: 1.4)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

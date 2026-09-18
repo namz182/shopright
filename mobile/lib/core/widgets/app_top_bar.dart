@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppTopBar extends StatelessWidget {
-  const AppTopBar({this.trailing, super.key});
+  const AppTopBar({required this.title, this.subtitle, this.trailing, super.key});
 
+  final String title;
+  final String? subtitle;
   final Widget? trailing;
 
   @override
@@ -11,15 +13,36 @@ class AppTopBar extends StatelessWidget {
       children: [
         const AppLogo(),
         const SizedBox(width: 10),
-        const Text(
-          'Shop Right',
-          style: TextStyle(
-            fontSize: 19,
-            letterSpacing: -.35,
-            fontWeight: FontWeight.w900,
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 19,
+                  letterSpacing: -.35,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 1),
+                Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF7B8494),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 10),
         trailing ?? const SizedBox(width: 40),
       ],
     );
@@ -27,7 +50,10 @@ class AppTopBar extends StatelessWidget {
 }
 
 class AppStickyTopBar extends StatelessWidget {
-  const AppStickyTopBar({super.key});
+  const AppStickyTopBar({required this.title, this.subtitle, super.key});
+
+  final String title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -37,10 +63,10 @@ class AppStickyTopBar extends StatelessWidget {
       right: 0,
       child: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        child: const SafeArea(
+        child: SafeArea(
           child: Padding(
             padding: EdgeInsets.fromLTRB(22, 12, 22, 8),
-            child: AppTopBar(),
+            child: AppTopBar(title: title, subtitle: subtitle),
           ),
         ),
       ),

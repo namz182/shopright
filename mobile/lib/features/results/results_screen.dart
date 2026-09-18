@@ -55,6 +55,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
         children: [
           RefreshIndicator.adaptive(
             onRefresh: _refresh,
+            edgeOffset: 86,
+            displacement: 110,
+            color: AppColors.brand,
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
@@ -142,7 +145,7 @@ class _ResultsHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(child: AppTopBar(trailing: SizedBox.shrink())),
+          const Expanded(child: AppTopBar(title: 'Comparison Results', trailing: SizedBox.shrink())),
         ],
       ),
     );
