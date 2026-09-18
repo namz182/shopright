@@ -39,22 +39,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     widget.repositories.settings.location().then((value) { if (mounted) setState(() => _location = value); });
   }
 
-  void _showMessage(BuildContext context, String title) {
-    showCupertinoDialog<void>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text(title),
-        content: const Text('This action is part of the static app prototype.'),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator.adaptive(
@@ -198,7 +182,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
     } catch (_) {
-      if (mounted) _showMessage(context, 'Location unavailable');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to connect')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _locationLoading = false);
     }

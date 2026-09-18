@@ -49,7 +49,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
       });
     } catch (error) {
       debugPrint('[ShopRight Shops] store load failed: $error');
-      if (mounted) setState(() { _loading = false; _error = 'Unable to load stores. Check that the backend is running and reachable.'; });
+      if (mounted) setState(() { _loading = false; _error = 'Unable to connect'; });
     }
   }
 

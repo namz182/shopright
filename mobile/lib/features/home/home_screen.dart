@@ -92,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (error) {
       debugPrint('[ShopRight Home] product load failed: $error');
-      if (mounted) setState(() { _loading = false; _catalogError = 'Unable to load products. Check that the backend is running and reachable.'; });
+      if (mounted) setState(() { _loading = false; _catalogError = 'Unable to connect'; });
     }
   }
 
