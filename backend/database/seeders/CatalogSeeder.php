@@ -98,10 +98,10 @@ class CatalogSeeder extends Seeder
     private function stores(): array
     {
         $rows = [
-            ['name' => 'Shoprite Ndola', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola', 'distance_km' => 2.1],
-            ['name' => 'Local Market (Chifubu)', 'location' => 'Chifubu, Ndola', 'province' => 'Copperbelt', 'district' => 'Ndola', 'distance_km' => 1.4],
-            ['name' => 'Pick n Pay Copperbelt', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola', 'distance_km' => 3.8],
-            ['name' => 'Melissa Supermarket', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola', 'distance_km' => 4.5],
+            ['name' => 'Shoprite Ndola', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
+            ['name' => 'Local Market (Chifubu)', 'location' => 'Chifubu, Ndola', 'province' => 'Copperbelt', 'district' => 'Ndola'],
+            ['name' => 'Pick n Pay Copperbelt', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
+            ['name' => 'Melissa Supermarket', 'location' => 'Ndola, Copperbelt', 'province' => 'Copperbelt', 'district' => 'Ndola'],
         ];
 
         $stores = [];
@@ -113,7 +113,6 @@ class CatalogSeeder extends Seeder
                     'province_id' => Province::where('name', $row['province'])->value('id'),
                     'district_id' => District::where('name', $row['district'])->whereHas('province', fn ($query) => $query->where('name', $row['province']))->value('id'),
                     'location' => $row['location'],
-                    'distance_km' => $row['distance_km'],
                 ],
             );
         }

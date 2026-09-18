@@ -3,16 +3,24 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/ui_components.dart';
+import '../../data/local/models.dart';
+import '../../data/remote/shop_right_api.dart';
+import '../../data/repositories/repositories.dart';
+import '../../data/repositories/data_sources.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
+    required this.repositories,
     required this.isDarkMode,
     required this.onThemeChanged,
+    this.onLocationChanged,
     super.key,
   });
 
   final bool isDarkMode;
+  final Repositories repositories;
   final ValueChanged<bool> onThemeChanged;
+  final ValueChanged<UserLocation>? onLocationChanged;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -20,6 +28,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late bool _isDarkMode = widget.isDarkMode;
+  UserLocation _location = const UserLocation();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.repositories.settings.location().then((value) { if (mounted) setState(() => _location = value); });
+  }
 
   void _showMessage(BuildContext context, String title) {
     showCupertinoDialog<void>(
@@ -40,7 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator.adaptive(
-      onRefresh: _refresh,
+      onRefresh: _refreshSettings,
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
@@ -103,8 +118,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsAction(
                         icon: CupertinoIcons.location_solid,
                         label: 'Location',
-                        value: 'Ndola, Copperbelt',
-                        onTap: () => _showMessage(context, 'Location'),
+                        value: _location.label,
+                        onTap: _chooseLocation,
                       ),
                       _SettingsAction(
                         icon: CupertinoIcons.bell_fill,
@@ -151,10 +166,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-}
 
-Future<void> _refresh() =>
-    Future<void>.delayed(const Duration(milliseconds: 850));
+  Future<void> _chooseLocation() async {
+    final api = ShopRightApi();
+    try {
+      final provinces = await api.fetchProvinces();
+      if (!mounted) return;
+      ProvinceInfo? province = provinces.where((item) => item.id == _location.provinceId).firstOrNull;
+      DistrictInfo? district;
+      List<DistrictInfo> districts = province == null ? const [] : await api.fetchDistricts(province.id);
+      district = districts.where((item) => item.id == _location.districtId).firstOrNull;
+      final selected = await showDialog<UserLocation>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Comparison location'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            DropdownButtonFormField<ProvinceInfo>(value: province, isExpanded: true, decoration: const InputDecoration(labelText: 'Province'), items: provinces.map((item) => DropdownMenuItem(value: item, child: Text(item.name))).toList(), onChanged: (value) async { if (value == null) return; final next = await api.fetchDistricts(value.id); setDialogState(() { province = value; districts = next; district = null; }); }),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<DistrictInfo>(value: district, isExpanded: true, decoration: const InputDecoration(labelText: 'District'), items: districts.map((item) => DropdownMenuItem(value: item, child: Text(item.name))).toList(), onChanged: (value) => setDialogState(() => district = value)),
+          ]),
+          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')), FilledButton(onPressed: province == null || district == null ? null : () => Navigator.pop(dialogContext, UserLocation(provinceId: province!.id, provinceName: province!.name, districtId: district!.id, districtName: district!.name)), child: const Text('Save'))],
+        )),
+      );
+      if (selected != null) {
+        await widget.repositories.settings.setLocation(selected);
+        if (mounted) {
+          setState(() => _location = selected);
+          widget.onLocationChanged?.call(selected);
+        }
+      }
+    } catch (_) {
+      if (mounted) _showMessage(context, 'Location unavailable');
+    }
+  }
+
+  Future<void> _refreshSettings() async {
+    final location = await widget.repositories.settings.location();
+    if (mounted) setState(() => _location = location);
+  }
+}
 
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({required this.children});

@@ -9,6 +9,7 @@ import '../../core/widgets/app_bottom_nav.dart';
 import '../../core/widgets/ui_components.dart';
 import '../../data/local/models.dart';
 import '../../data/repositories/repositories.dart';
+import '../../data/repositories/data_sources.dart';
 import '../results/comparison_result.dart';
 import '../results/results_screen.dart';
 
@@ -60,26 +61,32 @@ class _HomeScreenState extends State<HomeScreen> {
   Repositories get _repos => widget.repositories;
 
   double? _budget;
+  UserLocation _location = const UserLocation();
   bool _loading = true;
   List<String> _catalogNames = const [];
   Map<String, GroceryProduct> _catalogByName = const {};
+  String? _catalogError;
   final _items = <GroceryItem>[];
 
   @override
   void initState() {
     super.initState();
     _load();
-    unawaited(_refreshFromApi());
   }
 
   Future<void> _load() async {
     try {
       final budget = await _repos.settings.budget();
       final savedItems = await _repos.settings.shoppingItems();
-      final products = await _repos.catalog.products();
+      final location = await _repos.settings.location();
+      final products = await _repos.catalog.productsForLocation(
+        provinceId: location.provinceId,
+        districtId: location.districtId,
+      );
       if (!mounted) return;
       setState(() {
         _budget = budget;
+        _location = location;
         _items
           ..clear()
           ..addAll(
@@ -94,19 +101,12 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         _catalogNames = products.map((p) => p.name).toList();
         _catalogByName = {for (final p in products) p.name: p};
+        _catalogError = null;
         _loading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _refreshFromApi() async {
-    try {
-      await _repos.catalog.refreshFromApi();
-      await _load();
-    } catch (_) {
-      // Offline — keep using the local cache.
+    } catch (error) {
+      debugPrint('[ShopRight Home] product load failed: $error');
+      if (mounted) setState(() { _loading = false; _catalogError = 'Unable to load products. Check that the backend is running and reachable.'; });
     }
   }
 
@@ -148,6 +148,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   remove: _removeItem,
                   contains: (name) => _items.any((item) => item.name == name),
                 ),
+                if (_catalogError != null) ...[
+                  const SizedBox(height: 10),
+                  SoftCard(
+                    child: Text(
+                      _catalogError!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: secondaryTextColor(context), fontSize: 12),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 23),
                 SectionLabel(
                   'Your Shopping List (${_items.length} Items)',
@@ -262,8 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refresh() async {
-    await _refreshFromApi();
-    if (mounted) setState(() {});
+    await _load();
   }
 
   Future<void> _editBudget() async {
@@ -339,9 +348,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           )
           .toList(),
-      catalog: await _repos.catalog.products(),
-      stores: await _repos.catalog.stores(),
-      budget: _budget,
+      catalog: await _repos.catalog.productsForLocation(
+        provinceId: _location.provinceId,
+        districtId: _location.districtId,
+      ),
+      stores: await _repos.catalog.storesForLocation(
+        provinceId: _location.provinceId,
+        districtId: _location.districtId,
+      ),
+      budget: _budget ?? 0,
     );
     await _repos.comparisons.insert(result.toRecord());
     if (!mounted) return;

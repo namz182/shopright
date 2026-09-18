@@ -16,8 +16,6 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->string('location')->nullable();
-            $table->string('address')->nullable();
-            $table->decimal('distance_km', 5, 2)->nullable();
             $table->boolean('active')->default(true);
             $table->timestamps();
         });

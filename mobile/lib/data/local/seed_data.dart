@@ -142,25 +142,29 @@ class SeedData {
       'name': 'Shoprite Ndola',
       'slug': 'shoprite-ndola',
       'location': 'Ndola, Copperbelt',
-      'distance_km': 2.1,
+      'province_id': 2,
+      'district_id': 10,
     },
     {
       'name': 'Local Market (Chifubu)',
       'slug': 'local-market-chifubu',
       'location': 'Chifubu, Ndola',
-      'distance_km': 1.4,
+      'province_id': 2,
+      'district_id': 10,
     },
     {
       'name': 'Pick n Pay Copperbelt',
       'slug': 'pick-n-pay-copperbelt',
       'location': 'Ndola, Copperbelt',
-      'distance_km': 3.8,
+      'province_id': 2,
+      'district_id': 10,
     },
     {
       'name': 'Melissa Supermarket',
       'slug': 'melissa-supermarket',
       'location': 'Ndola, Copperbelt',
-      'distance_km': 4.5,
+      'province_id': 2,
+      'district_id': 10,
     },
   ];
 
@@ -186,15 +190,13 @@ class SeedData {
     },
   };
 
-  static const double budget = 1200.00;
+  static const double budget = 0.00;
 
-  static const List<ShoppingItem> shoppingList = [
-    ShoppingItem(name: 'Breakfast Meal 25kg', category: 'Essential Staples', quantity: 2),
-    ShoppingItem(name: 'Cooking Oil 2.5L', category: 'Cooking Goods', quantity: 1),
-    ShoppingItem(name: 'White Sugar 2kg', category: 'Pantry Items', quantity: 1),
-  ];
+  static const List<ShoppingItem> shoppingList = [];
 
-  static const List<Map<String, dynamic>> sampleComparisons = [
+  static const List<Map<String, dynamic>> sampleComparisons = const [];
+  /*
+  static const List<Map<String, dynamic>> demoComparisons = [
     {
       'reference': 'CMP-904-ZM21',
       'budget': 1200.00,
@@ -238,5 +240,5 @@ class SeedData {
         {'product_name': 'Toilet Paper 12 Pack', 'product_unit': '12 pk', 'quantity': 1, 'store_name': 'Pick n Pay Copperbelt', 'unit_price': 185.00, 'line_total': 185.00},
       ],
     },
-  ];
+  ]; */
 }

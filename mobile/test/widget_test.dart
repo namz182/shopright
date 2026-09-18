@@ -138,7 +138,6 @@ List<StoreInfo> _storesFromSeed() => [
           id: index + 1,
           name: store['name'] as String,
           location: store['location'] as String?,
-          distanceKm: (store['distance_km'] as num).toDouble(),
         ),
     ];
 

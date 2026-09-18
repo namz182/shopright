@@ -86,7 +86,6 @@ class ComparisonResult {
       storeTotals.add(
         StoreTotal(
           storeName: store.name,
-          distanceKm: store.distanceKm,
           total: total,
           coveredItems: covered,
         ),
@@ -174,11 +173,9 @@ class StoreTotal {
     required this.storeName,
     required this.total,
     required this.coveredItems,
-    this.distanceKm,
   });
 
   final String storeName;
-  final double? distanceKm;
   final double total;
 
   /// How many basket items this store had a price for.

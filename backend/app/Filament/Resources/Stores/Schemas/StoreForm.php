@@ -25,8 +25,6 @@ class StoreForm
                     ->required()
                     ->disabled(fn (Get $get) => blank($get('province_id'))),
                 TextInput::make('location'),
-                TextInput::make('address'),
-                TextInput::make('distance_km')->numeric()->minValue(0),
                 Toggle::make('active')->default(true),
             ]);
     }

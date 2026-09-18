@@ -381,9 +381,6 @@ class _ShopTotals extends StatelessWidget {
             if (index > 0) const Divider(height: 25),
             _ShopRow(
               name: store.storeName,
-              distance: store.distanceKm != null
-                  ? '${_trimDistance(store.distanceKm!)} km away'
-                  : null,
               total: formatZmw(store.total),
               difference: index == 0
                   ? 'Recommended'
@@ -396,21 +393,14 @@ class _ShopTotals extends StatelessWidget {
   }
 }
 
-String _trimDistance(double km) {
-  final text = km.toStringAsFixed(1);
-  return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
-}
-
 class _ShopRow extends StatelessWidget {
   const _ShopRow({
     required this.name,
     required this.total,
     required this.difference,
-    this.distance,
   });
 
   final String name;
-  final String? distance;
   final String total;
   final String difference;
 
@@ -429,13 +419,6 @@ class _ShopRow extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              if (distance != null) ...[
-                const SizedBox(height: 3),
-                Text(
-                  distance!,
-                  style: const TextStyle(color: AppColors.muted, fontSize: 10),
-                ),
-              ],
             ],
           ),
         ),

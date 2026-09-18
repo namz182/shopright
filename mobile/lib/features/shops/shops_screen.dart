@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/ui_components.dart';
 import '../../data/local/models.dart';
 import '../../data/repositories/repositories.dart';
+import '../../data/repositories/data_sources.dart';
 
 class ShopsScreen extends StatefulWidget {
   const ShopsScreen({required this.repositories, super.key});
@@ -18,6 +19,8 @@ class ShopsScreen extends StatefulWidget {
 class _ShopsScreenState extends State<ShopsScreen> {
   List<StoreInfo> _stores = const [];
   bool _loading = true;
+  String? _error;
+  UserLocation _location = const UserLocation();
 
   @override
   void initState() {
@@ -27,23 +30,25 @@ class _ShopsScreenState extends State<ShopsScreen> {
 
   Future<void> _load() async {
     try {
-      final stores = await widget.repositories.catalog.stores();
+      final location = await widget.repositories.settings.location();
+      final stores = await widget.repositories.catalog.storesForLocation(
+        provinceId: location.provinceId,
+        districtId: location.districtId,
+      );
       if (!mounted) return;
       setState(() {
         _stores = stores;
+        _location = location;
+        _error = null;
         _loading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (error) {
+      debugPrint('[ShopRight Shops] store load failed: $error');
+      if (mounted) setState(() { _loading = false; _error = 'Unable to load stores. Check that the backend is running and reachable.'; });
     }
   }
 
   Future<void> _refresh() async {
-    try {
-      await widget.repositories.catalog.refreshFromApi();
-    } catch (_) {
-      // Offline — keep cached stores.
-    }
     await _load();
   }
 
@@ -68,14 +73,14 @@ class _ShopsScreenState extends State<ShopsScreen> {
                   ),
                   SizedBox(height: 7),
                   Text(
-                    'Compare prices from stores around Ndola.',
+                    'Compare prices from stores in your selected location.',
                     style: TextStyle(
                       color: secondaryTextColor(context),
                       fontSize: 13,
                     ),
                   ),
                   SizedBox(height: 22),
-                  const _LocationCard(),
+                  _LocationCard(location: _location),
                   SizedBox(height: 24),
                   SectionLabel('Available Stores'),
                   SizedBox(height: 11),
@@ -90,15 +95,24 @@ class _ShopsScreenState extends State<ShopsScreen> {
                         ),
                       ),
                     )
+                  else if (_error != null)
+                    SoftCard(child: Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: secondaryTextColor(context), fontSize: 12)))
+                  else if (_stores.isEmpty)
+                    SoftCard(
+                      child: Text(
+                        _location.isSelected
+                            ? 'No stores are available in this district yet.'
+                            : 'Choose a province and district in Settings to see local stores.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: secondaryTextColor(context), fontSize: 13),
+                      ),
+                    )
                   else
                     ..._stores.map(
                       (store) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _ShopCard(
                           name: store.name,
-                          distance: store.distanceKm != null
-                              ? '${_trimDistance(store.distanceKm!)} km away'
-                              : null,
                           detail: store.location,
                         ),
                       ),
@@ -113,13 +127,10 @@ class _ShopsScreenState extends State<ShopsScreen> {
   }
 }
 
-String _trimDistance(double km) {
-  final text = km.toStringAsFixed(1);
-  return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
-}
-
 class _LocationCard extends StatelessWidget {
-  const _LocationCard();
+  const _LocationCard({required this.location});
+
+  final UserLocation location;
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +144,7 @@ class _LocationCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ndola, Copperbelt',
+                  location.label,
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
                 ),
                 SizedBox(height: 3),
@@ -159,11 +170,9 @@ class _ShopCard extends StatelessWidget {
   const _ShopCard({
     required this.name,
     required this.detail,
-    this.distance,
   });
 
   final String name;
-  final String? distance;
   final String? detail;
 
   @override
@@ -184,16 +193,6 @@ class _ShopCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                if (distance != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    distance!,
-                    style: TextStyle(
-                      color: secondaryTextColor(context),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
                 if (detail != null && detail!.trim().isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(

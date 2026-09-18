@@ -26,6 +26,7 @@ class RootShell extends StatefulWidget {
 
 class _RootShellState extends State<RootShell> {
   AppTab _tab = AppTab.home;
+  int _locationRevision = 0;
 
   void _switchTab(AppTab tab) {
     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -41,16 +42,22 @@ class _RootShellState extends State<RootShell> {
             index: _tab.index,
             children: [
               HomeScreen(
+                key: ValueKey('home-$_locationRevision'),
                 repositories: widget.repositories,
                 isDarkMode: widget.isDarkMode,
                 onThemeChanged: widget.onThemeChanged,
                 onTabSelected: _switchTab,
               ),
               HistoryScreen(repositories: widget.repositories),
-              ShopsScreen(repositories: widget.repositories),
+              ShopsScreen(
+                key: ValueKey('shops-$_locationRevision'),
+                repositories: widget.repositories,
+              ),
               SettingsScreen(
+                repositories: widget.repositories,
                 isDarkMode: widget.isDarkMode,
                 onThemeChanged: widget.onThemeChanged,
+                onLocationChanged: (_) => setState(() => _locationRevision++),
               ),
             ],
           ),

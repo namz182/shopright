@@ -32,7 +32,7 @@ class _StubApi extends ShopRightApi {
   @override
   Future<List<StoreInfo>> fetchStores() async {
     return [
-      StoreInfo(id: 1, name: 'Shoprite Ndola', location: 'Ndola', distanceKm: 1.0),
+      StoreInfo(id: 1, name: 'Shoprite Ndola', location: 'Ndola'),
     ];
   }
 }
