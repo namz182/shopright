@@ -13,29 +13,15 @@ import '../../data/repositories/data_sources.dart';
 import '../results/comparison_result.dart';
 import '../results/results_screen.dart';
 
-IconData iconForCategory(String category) {
-  return switch (category) {
-    'Essential Staples' => CupertinoIcons.circle_grid_hex_fill,
-    'Cooking Goods' => CupertinoIcons.drop_fill,
-    'Pantry Items' => CupertinoIcons.cube_box_fill,
-    'Fresh Produce' => CupertinoIcons.sun_max_fill,
-    'Dairy' => CupertinoIcons.drop_fill,
-    'Bakery' => CupertinoIcons.cube_box_fill,
-    _ => CupertinoIcons.bag_fill,
-  };
-}
-
 class GroceryItem {
   GroceryItem({
     required this.name,
     required this.category,
-    required this.icon,
     required this.quantity,
   });
 
   final String name;
   final String category;
-  final IconData icon;
   int quantity;
 }
 
@@ -95,7 +81,6 @@ class _HomeScreenState extends State<HomeScreen> {
               (item) => GroceryItem(
                 name: item.name,
                 category: item.category,
-                icon: iconForCategory(item.category),
                 quantity: item.quantity,
               ),
             ),
@@ -287,7 +272,6 @@ class _HomeScreenState extends State<HomeScreen> {
         GroceryItem(
           name: name,
           category: category,
-          icon: iconForCategory(category),
           quantity: 1,
         ),
       );
@@ -588,7 +572,7 @@ class _ShoppingItemCard extends StatelessWidget {
       padding: const EdgeInsets.all(13),
       child: Row(
         children: [
-          BrandIconTile(icon: item.icon),
+          const BrandIconTile(icon: CupertinoIcons.cart_fill),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
