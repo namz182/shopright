@@ -4,7 +4,9 @@
 
 **Shop Right** is a mobile shopping and price-comparison application designed to help users build a unified grocery list, search for essential products, compare prices across multiple stores (such as local supermarkets and markets), and discover the lowest total cost for their basket or optimal split-purchase routes.
 
+[![Architecture diagram of namz182/shopright](https://gitdiagram.com/namz182/shopright/diagram.png)](https://gitdiagram.com/namz182/shopright?utm_source=readme&utm_medium=picture)
 ---
+
 
 ## 2. Technical Stack
 
@@ -14,6 +16,8 @@
 | **Backend API** | **Laravel 13** (PHP) | RESTful API, Sanctum authentication, Eloquent ORM |
 
 ---
+
+
 
 ## 3. Core Features & User Stories
 
